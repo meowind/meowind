@@ -6,7 +6,8 @@
         "nanos",
         "paren",
         "punct",
-        "puncts"
+        "puncts",
+        "winapi"
     ],
     "editor.semanticTokenColorCustomizations": {
         "enabled": true,

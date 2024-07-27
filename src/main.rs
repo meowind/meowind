@@ -5,6 +5,8 @@ pub mod frontend;
 pub mod structs;
 pub mod utils;
 
+use utils::colors;
+
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
     frontend::lexing::Lexer,
@@ -14,6 +16,9 @@ use crate::{
 use std::{env, fs, io::ErrorKind, path::PathBuf, process, time::Instant};
 
 fn main() {
+    #[cfg(windows)]
+    colors::init_windows_colors();
+
     let args = parse_arguments();
 
     let source_contents = read_source_contents(&args.path);

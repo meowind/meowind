@@ -1,4 +1,4 @@
-// TODO: colors not working in powershell and cmd
+use winapi_util::console::Console;
 
 pub const RED: &str = "\x1b[91m";
 pub const GREEN: &str = "\x1b[92m";
@@ -16,3 +16,10 @@ pub const ITALIC: &str = "\x1b[3m";
 pub const UNDERLINE: &str = "\x1b[4m";
 
 pub const RESET: &str = "\x1b[0m";
+
+pub fn init_windows_colors() {
+    let mut con = Console::stdout();
+    let _ = con
+        .as_mut()
+        .map(|con| con.set_virtual_terminal_processing(true));
+}
