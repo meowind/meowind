@@ -1,4 +1,3 @@
-use crate::debug;
 use std::{fmt, slice, str::FromStr};
 
 pub struct Token {
@@ -170,7 +169,6 @@ impl Tokens {
     }
 
     pub fn push(&mut self, token: Token) {
-        debug!("== LEXER PUSHING TOKEN ==\n{}\n", token);
         self.vector.push(token);
     }
 
@@ -186,7 +184,6 @@ impl Tokens {
 
     pub fn push_new(&mut self, ln: usize, col: usize, kind: TokenKind, value: Option<String>) {
         let token = Token::new(ln, col, kind, value);
-        debug!("== LEXER PUSHING TOKEN ==\n{}\n", token);
         self.vector.push(token);
     }
 

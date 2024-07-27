@@ -1,8 +1,5 @@
 // TODO: undefined errors
 
-#[cfg(debug_assertions)]
-use crate::utils::Stopwatch;
-
 use super::tokens::{
     ComplexPunctuationKind::{self, *},
     KeywordKind,
@@ -12,7 +9,6 @@ use super::tokens::{
     Tokens,
 };
 use crate::{
-    debug,
     errors::{
         syntax::{SyntaxError, SyntaxErrorKind},
         MeowindErrorList,
@@ -51,11 +47,6 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(&mut self) -> (&Tokens, &MeowindErrorList<SyntaxError>) {
-        debug!("== LEXER AWAKE ==\n");
-
-        #[cfg(debug_assertions)]
-        let mut stopwatch = Stopwatch::start_new();
-
         self.tokens.vector.clear();
         self.errors.errors.clear();
         self.reset_buffers();
@@ -71,11 +62,6 @@ impl<'a> Lexer<'a> {
             self.col += 1;
 
             if let Ok(kind) = SimplePunctuationKind::from_char(ch) {
-                debug!(
-                    "found simple punctuation, pushing \"{}\" and then \"{ch}\"\n",
-                    self.value_buf
-                );
-
                 if !self.punct_buf.is_empty() {
                     self.process_complex_punctuation(ch);
                 } else {
@@ -94,8 +80,6 @@ impl<'a> Lexer<'a> {
             }
 
             if ch.is_ascii_punctuation() && ch != '_' {
-                debug!("found complex punctuation: {ch}\n");
-
                 self.punct_buf.push(ch);
                 continue;
             }
@@ -136,25 +120,9 @@ impl<'a> Lexer<'a> {
             }
 
             self.value_buf.push(ch);
-
-            debug!(
-                "pushed {ch} to buffer\ncurrent value: {}\ncurrent kind: {:?}\nlocation: ({}, {})\n",
-                self.value_buf,
-                self.kind_buf,
-                self.ln,
-                self.col
-            );
         }
 
         self.tokens.push_new(self.ln, self.col + 1, EOF, None);
-
-        debug!(
-            "== LEXER FINISHED ==\nelapsed time: {}μs = {}ms\ntotal tokens: {}\n",
-            stopwatch.micros(),
-            stopwatch.millis(),
-            self.tokens.vector.len()
-        );
-
         return (&self.tokens, &self.errors);
     }
 
@@ -198,8 +166,6 @@ impl<'a> Lexer<'a> {
                 );
                 self.reset_buffers();
 
-                debug!("starting decomposing \"{ch}\" to multiple tokens\n");
-
                 self.decompose_complex_punctuation();
             }
         }
@@ -209,13 +175,9 @@ impl<'a> Lexer<'a> {
 
     fn recognize_dot(&mut self, ch: char) {
         if ch.is_digit(10) {
-            debug!("recognized \".\" as a part of float\n");
-
             self.kind_buf = Literal(Float);
             self.value_buf.push('.');
         } else {
-            debug!("recognized \".\" as a member separator\n");
-
             self.tokens.push_new_not_empty(
                 self.ln,
                 self.col - self.value_buf.count(),
@@ -239,8 +201,6 @@ impl<'a> Lexer<'a> {
             && let Literal(lit) = &self.kind_buf
             && lit.is_number()
         {
-            debug!("recognized \"-\" as a part of E notation\n");
-
             self.kind_buf = Literal(Float);
             self.value_buf.push('-');
         } else {
@@ -251,8 +211,6 @@ impl<'a> Lexer<'a> {
                 self.value_buf.value.clone(),
             );
             self.reset_buffers();
-
-            debug!("recognized \"-\" as a minus operator\n");
 
             self.tokens.push_new(
                 self.ln,

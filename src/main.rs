@@ -11,7 +11,7 @@ use crate::{
     structs::{MeowindArguments, MeowindScriptSource},
     utils::colors::*,
 };
-use std::{env, fs, io::ErrorKind, path::PathBuf, process};
+use std::{env, fs, io::ErrorKind, path::PathBuf, process, time::Instant};
 
 fn main() {
     let args = parse_arguments();
@@ -24,6 +24,7 @@ fn main() {
         args.path.display()
     );
 
+    let lexer_start = Instant::now();
     let mut lexer = Lexer::new(source);
     let (tokens, errors) = lexer.tokenize();
     errors.throw_if_there();
@@ -32,8 +33,6 @@ fn main() {
     #[cfg(not(debug_assertions))]
     let _ = tokens;
 
-    debug!("== OUTPUT TOKENS ==");
-
     #[cfg(debug_assertions)]
     let tokens_info = tokens
         .iter()
@@ -41,7 +40,12 @@ fn main() {
         .collect::<Vec<_>>()
         .join("\n");
 
-    debug!("{}", tokens_info);
+    debug!(
+        "lexer output:\n{}\nfinished in: {}us or {}ms",
+        tokens_info,
+        lexer_start.elapsed().as_micros(),
+        lexer_start.elapsed().as_millis()
+    );
 
     println!(
         "{GREEN}{BOLD}successfully compiled{WHITE} {}{RESET}",
