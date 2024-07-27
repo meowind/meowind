@@ -17,6 +17,7 @@ pub const UNDERLINE: &str = "\x1b[4m";
 
 pub const RESET: &str = "\x1b[0m";
 
+#[cfg(windows)]
 pub fn init_windows_colors() {
     let mut con = Console::stdout();
     let _ = con
