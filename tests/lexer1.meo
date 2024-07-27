@@ -1,0 +1,1 @@
+const float constant_variable = 50 + (16.0 - 52.4) * (25.55555 / (20 % 15 ** 4));

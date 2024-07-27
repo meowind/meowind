@@ -1,0 +1,20 @@
+{
+    "cSpell.words": [
+        "appender",
+        "canonicalize",
+        "meowind",
+        "nanos",
+        "paren",
+        "punct",
+        "puncts"
+    ],
+    "editor.semanticTokenColorCustomizations": {
+        "enabled": true,
+        "rules": {
+            "*.mutable": {
+                "underline": false,
+            }
+        }
+    },
+    "cSpell.language": "en,ru"
+}

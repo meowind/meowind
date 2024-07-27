@@ -1,0 +1,398 @@
+== LEXER AWAKE ==
+
+pushed c to buffer
+current value: c
+current kind: Identifier
+location: (1, 1)
+
+pushed o to buffer
+current value: co
+current kind: Identifier
+location: (1, 2)
+
+pushed n to buffer
+current value: con
+current kind: Identifier
+location: (1, 3)
+
+pushed s to buffer
+current value: cons
+current kind: Identifier
+location: (1, 4)
+
+pushed t to buffer
+current value: const
+current kind: Identifier
+location: (1, 5)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 1) Keyword(Const)
+
+pushed f to buffer
+current value: f
+current kind: Identifier
+location: (1, 7)
+
+pushed l to buffer
+current value: fl
+current kind: Identifier
+location: (1, 8)
+
+pushed o to buffer
+current value: flo
+current kind: Identifier
+location: (1, 9)
+
+pushed a to buffer
+current value: floa
+current kind: Identifier
+location: (1, 10)
+
+pushed t to buffer
+current value: float
+current kind: Identifier
+location: (1, 11)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 7) Identifier "float"
+
+pushed c to buffer
+current value: c
+current kind: Identifier
+location: (1, 13)
+
+pushed o to buffer
+current value: co
+current kind: Identifier
+location: (1, 14)
+
+pushed n to buffer
+current value: con
+current kind: Identifier
+location: (1, 15)
+
+pushed s to buffer
+current value: cons
+current kind: Identifier
+location: (1, 16)
+
+pushed t to buffer
+current value: const
+current kind: Identifier
+location: (1, 17)
+
+pushed a to buffer
+current value: consta
+current kind: Identifier
+location: (1, 18)
+
+pushed n to buffer
+current value: constan
+current kind: Identifier
+location: (1, 19)
+
+pushed t to buffer
+current value: constant
+current kind: Identifier
+location: (1, 20)
+
+pushed _ to buffer
+current value: constant_
+current kind: Identifier
+location: (1, 21)
+
+pushed v to buffer
+current value: constant_v
+current kind: Identifier
+location: (1, 22)
+
+pushed a to buffer
+current value: constant_va
+current kind: Identifier
+location: (1, 23)
+
+pushed r to buffer
+current value: constant_var
+current kind: Identifier
+location: (1, 24)
+
+pushed i to buffer
+current value: constant_vari
+current kind: Identifier
+location: (1, 25)
+
+pushed a to buffer
+current value: constant_varia
+current kind: Identifier
+location: (1, 26)
+
+pushed b to buffer
+current value: constant_variab
+current kind: Identifier
+location: (1, 27)
+
+pushed l to buffer
+current value: constant_variabl
+current kind: Identifier
+location: (1, 28)
+
+pushed e to buffer
+current value: constant_variable
+current kind: Identifier
+location: (1, 29)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 13) Identifier "constant_variable"
+
+found complex punctuation: =
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 31) ComplexPunctuation(Assignment)
+
+pushed 5 to buffer
+current value: 5
+current kind: Literal(Integer)
+location: (1, 33)
+
+pushed 0 to buffer
+current value: 50
+current kind: Literal(Integer)
+location: (1, 34)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 33) Literal(Integer) "50"
+
+found complex punctuation: +
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 36) ComplexPunctuation(OperatorPlus)
+
+found simple punctuation, pushing "" and then "("
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 38) SimplePunctuation(ParenOpen)
+
+pushed 1 to buffer
+current value: 1
+current kind: Literal(Integer)
+location: (1, 39)
+
+pushed 6 to buffer
+current value: 16
+current kind: Literal(Integer)
+location: (1, 40)
+
+found complex punctuation: .
+
+recognized "." as a part of float
+
+pushed 0 to buffer
+current value: 16.0
+current kind: Literal(Float)
+location: (1, 42)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 39) Literal(Float) "16.0"
+
+found complex punctuation: -
+
+recognized "-" as a minus operator
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 44) ComplexPunctuation(OperatorMinus)
+
+pushed 5 to buffer
+current value: 5
+current kind: Literal(Integer)
+location: (1, 46)
+
+pushed 2 to buffer
+current value: 52
+current kind: Literal(Integer)
+location: (1, 47)
+
+found complex punctuation: .
+
+recognized "." as a part of float
+
+pushed 4 to buffer
+current value: 52.4
+current kind: Literal(Float)
+location: (1, 49)
+
+found simple punctuation, pushing "52.4" and then ")"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 46) Literal(Float) "52.4"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 50) SimplePunctuation(ParenClose)
+
+found complex punctuation: *
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 52) ComplexPunctuation(OperatorMultiply)
+
+found simple punctuation, pushing "" and then "("
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 54) SimplePunctuation(ParenOpen)
+
+pushed 2 to buffer
+current value: 2
+current kind: Literal(Integer)
+location: (1, 55)
+
+pushed 5 to buffer
+current value: 25
+current kind: Literal(Integer)
+location: (1, 56)
+
+found complex punctuation: .
+
+recognized "." as a part of float
+
+pushed 5 to buffer
+current value: 25.5
+current kind: Literal(Float)
+location: (1, 58)
+
+pushed 5 to buffer
+current value: 25.55
+current kind: Literal(Float)
+location: (1, 59)
+
+pushed 5 to buffer
+current value: 25.555
+current kind: Literal(Float)
+location: (1, 60)
+
+pushed 5 to buffer
+current value: 25.5555
+current kind: Literal(Float)
+location: (1, 61)
+
+pushed 5 to buffer
+current value: 25.55555
+current kind: Literal(Float)
+location: (1, 62)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 55) Literal(Float) "25.55555"
+
+found complex punctuation: /
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 64) ComplexPunctuation(OperatorDivide)
+
+found simple punctuation, pushing "" and then "("
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 66) SimplePunctuation(ParenOpen)
+
+pushed 2 to buffer
+current value: 2
+current kind: Literal(Integer)
+location: (1, 67)
+
+pushed 0 to buffer
+current value: 20
+current kind: Literal(Integer)
+location: (1, 68)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 67) Literal(Integer) "20"
+
+found complex punctuation: %
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 70) ComplexPunctuation(OperatorModulo)
+
+pushed 1 to buffer
+current value: 1
+current kind: Literal(Integer)
+location: (1, 72)
+
+pushed 5 to buffer
+current value: 15
+current kind: Literal(Integer)
+location: (1, 73)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 72) Literal(Integer) "15"
+
+found complex punctuation: *
+
+found complex punctuation: *
+
+starting decomposing " " to multiple tokens
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 75) ComplexPunctuation(OperatorPower)
+
+pushed 4 to buffer
+current value: 4
+current kind: Literal(Integer)
+location: (1, 78)
+
+found simple punctuation, pushing "4" and then ")"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 78) Literal(Integer) "4"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 79) SimplePunctuation(ParenClose)
+
+found simple punctuation, pushing "" and then ")"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 80) SimplePunctuation(ParenClose)
+
+found simple punctuation, pushing "" and then ";"
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 81) SimplePunctuation(Semicolon)
+
+== LEXER PUSHING TOKEN ==
+(line: 1, ch: 82) EOF
+
+== LEXER FINISHED ==
+elapsed time: 128μs = 0ms
+total tokens: 25
+
+== OUTPUT TOKENS ==
+(line: 1, ch: 1) Keyword(Const)
+(line: 1, ch: 7) Identifier "float"
+(line: 1, ch: 13) Identifier "constant_variable"
+(line: 1, ch: 31) ComplexPunctuation(Assignment)
+(line: 1, ch: 33) Literal(Integer) "50"
+(line: 1, ch: 36) ComplexPunctuation(OperatorPlus)
+(line: 1, ch: 38) SimplePunctuation(ParenOpen)
+(line: 1, ch: 39) Literal(Float) "16.0"
+(line: 1, ch: 44) ComplexPunctuation(OperatorMinus)
+(line: 1, ch: 46) Literal(Float) "52.4"
+(line: 1, ch: 50) SimplePunctuation(ParenClose)
+(line: 1, ch: 52) ComplexPunctuation(OperatorMultiply)
+(line: 1, ch: 54) SimplePunctuation(ParenOpen)
+(line: 1, ch: 55) Literal(Float) "25.55555"
+(line: 1, ch: 64) ComplexPunctuation(OperatorDivide)
+(line: 1, ch: 66) SimplePunctuation(ParenOpen)
+(line: 1, ch: 67) Literal(Integer) "20"
+(line: 1, ch: 70) ComplexPunctuation(OperatorModulo)
+(line: 1, ch: 72) Literal(Integer) "15"
+(line: 1, ch: 75) ComplexPunctuation(OperatorPower)
+(line: 1, ch: 78) Literal(Integer) "4"
+(line: 1, ch: 79) SimplePunctuation(ParenClose)
+(line: 1, ch: 80) SimplePunctuation(ParenClose)
+(line: 1, ch: 81) SimplePunctuation(Semicolon)
+(line: 1, ch: 82) EOF
