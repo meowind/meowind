@@ -1,6 +1,6 @@
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::utils::string::*;
+use crate::utils::colors::*;
 use core::fmt;
 use std::path::PathBuf;
 

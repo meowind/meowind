@@ -1,3 +1,5 @@
+pub mod colors;
 pub mod debug;
-pub mod stopwatch;
-pub mod string;
+mod stopwatch;
+
+pub use stopwatch::*;

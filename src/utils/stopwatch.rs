@@ -12,10 +12,10 @@ impl Stopwatch {
     }
 
     pub fn millis(&mut self) -> usize {
-        return self.start.elapsed().as_millis() as usize;
+        self.start.elapsed().as_millis() as usize
     }
 
     pub fn micros(&mut self) -> usize {
-        return self.start.elapsed().as_micros() as usize;
+        self.start.elapsed().as_micros() as usize
     }
 }

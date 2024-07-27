@@ -1,5 +1,5 @@
-use crate::{debug, utils::debug::Debugger};
-use std::{cell::RefCell, fmt, slice, str::FromStr};
+use crate::debug;
+use std::{fmt, slice, str::FromStr};
 
 pub struct Token {
     ln: usize,
@@ -42,7 +42,7 @@ pub enum LiteralKind {
 
 impl LiteralKind {
     pub fn is_number(&self) -> bool {
-        self == &LiteralKind::Integer || self == &LiteralKind::Float
+        matches!(self, LiteralKind::Integer | LiteralKind::Float)
     }
 }
 
@@ -160,21 +160,17 @@ impl FromStr for ComplexPunctuationKind {
     }
 }
 
-pub struct Tokens<'a> {
+pub struct Tokens {
     pub vector: Vec<Token>,
-    debugger: &'a RefCell<&'a mut Debugger>,
 }
 
-impl<'a> Tokens<'a> {
-    pub fn new(debugger: &'a RefCell<&'a mut Debugger>) -> Tokens<'a> {
-        Tokens {
-            vector: Vec::new(),
-            debugger,
-        }
+impl Tokens {
+    pub fn new() -> Tokens {
+        Tokens { vector: Vec::new() }
     }
 
     pub fn push(&mut self, token: Token) {
-        debug!(&self.debugger, "== LEXER PUSHING TOKEN ==\n{}\n", token);
+        debug!("== LEXER PUSHING TOKEN ==\n{}\n", token);
         self.vector.push(token);
     }
 
@@ -190,7 +186,7 @@ impl<'a> Tokens<'a> {
 
     pub fn push_new(&mut self, ln: usize, col: usize, kind: TokenKind, value: Option<String>) {
         let token = Token::new(ln, col, kind, value);
-        debug!(&self.debugger, "== LEXER PUSHING TOKEN ==\n{}\n", token);
+        debug!("== LEXER PUSHING TOKEN ==\n{}\n", token);
         self.vector.push(token);
     }
 

@@ -1,5 +1,5 @@
 use super::MeowindError;
-use crate::utils::string::*;
+use crate::utils::colors::*;
 use std::fmt;
 
 pub struct CommandLineError {

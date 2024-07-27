@@ -1,4 +1,4 @@
-use crate::utils::string::*;
+use crate::utils::colors::*;
 use std::{fmt, path::PathBuf};
 
 use super::{context::MeowindErrorContext, MeowindError};

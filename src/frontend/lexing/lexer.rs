@@ -1,7 +1,7 @@
 // TODO: undefined errors
 
 #[cfg(debug_assertions)]
-use crate::utils::stopwatch::Stopwatch;
+use crate::utils::Stopwatch;
 
 use super::tokens::{
     ComplexPunctuationKind::{self, *},
@@ -17,18 +17,15 @@ use crate::{
         syntax::{SyntaxError, SyntaxErrorKind},
         MeowindErrorList,
     },
-    info,
     structs::MeowindScriptSource,
-    utils::debug::Debugger,
 };
-use std::{cell::RefCell, fmt, str::FromStr};
+use std::{fmt, str::FromStr};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Lexer<'a> {
     pub src: MeowindScriptSource<'a>,
-    pub debug: &'a RefCell<&'a mut Debugger>,
 
-    tokens: Tokens<'a>,
+    tokens: Tokens,
     errors: MeowindErrorList<SyntaxError>,
 
     ln: usize,
@@ -39,14 +36,10 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(
-        source: MeowindScriptSource<'a>,
-        debugger: &'a RefCell<&'a mut Debugger>,
-    ) -> Lexer<'a> {
+    pub fn new(source: MeowindScriptSource) -> Lexer {
         Lexer {
             src: source,
-            debug: debugger,
-            tokens: Tokens::new(debugger),
+            tokens: Tokens::new(),
             errors: MeowindErrorList::new(),
 
             ln: 1,
@@ -57,8 +50,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self) -> (&'a Tokens, &'a MeowindErrorList<SyntaxError>) {
-        debug!(&self.debug, "== LEXER AWAKE ==\n");
+    pub fn tokenize(&mut self) -> (&Tokens, &MeowindErrorList<SyntaxError>) {
+        debug!("== LEXER AWAKE ==\n");
 
         #[cfg(debug_assertions)]
         let mut stopwatch = Stopwatch::start_new();
@@ -66,9 +59,8 @@ impl<'a> Lexer<'a> {
         self.tokens.vector.clear();
         self.errors.errors.clear();
         self.reset_buffers();
-        self.punct_buf = LexerValueBuffer::new();
 
-        for ch in self.src.chars.clone() {
+        for ch in self.src.contents.clone().chars() {
             if ch == '\n' {
                 self.ln += 1;
                 self.col = 0;
@@ -80,8 +72,8 @@ impl<'a> Lexer<'a> {
 
             if let Ok(kind) = SimplePunctuationKind::from_char(ch) {
                 debug!(
-                    &self.debug,
-                    "found simple punctuation, pushing \"{}\" and then \"{ch}\"\n", self.value_buf
+                    "found simple punctuation, pushing \"{}\" and then \"{ch}\"\n",
+                    self.value_buf
                 );
 
                 if !self.punct_buf.is_empty() {
@@ -102,7 +94,7 @@ impl<'a> Lexer<'a> {
             }
 
             if ch.is_ascii_punctuation() && ch != '_' {
-                debug!(&self.debug, "found complex punctuation: {ch}\n");
+                debug!("found complex punctuation: {ch}\n");
 
                 self.punct_buf.push(ch);
                 continue;
@@ -117,34 +109,35 @@ impl<'a> Lexer<'a> {
                 continue;
             }
 
-            if self.kind_buf == Undefined {
-                if ch.is_alphabetic() || ch == '_' {
-                    self.kind_buf = Identifier;
-                } else if ch.is_digit(10) {
-                    self.kind_buf = Literal(Integer);
+            match &self.kind_buf {
+                Undefined => {
+                    if ch.is_alphabetic() || ch == '_' {
+                        self.kind_buf = Identifier;
+                    } else if ch.is_digit(10) {
+                        self.kind_buf = Literal(Integer);
+                    }
                 }
-            } else if let Literal(lit) = &self.kind_buf
-                && lit.is_number()
-            {
-                if ch.is_alphabetic() && ch != 'E' && ch != 'e' {
-                    self.kind_buf = InvalidIdentifier;
+                Literal(lit) if lit.is_number() => {
+                    if ch.is_alphabetic() && ch != 'E' && ch != 'e' {
+                        self.kind_buf = InvalidIdentifier;
 
-                    self.errors.push(SyntaxError::new_with_context(
-                        SyntaxErrorKind::UnexpectedCharacter,
-                        "identifiers cannot start with a digit",
-                        self.ln,
-                        self.src.lines[self.ln - 1].to_owned(),
-                        self.col - self.value_buf.count(),
-                        self.col,
-                        self.src.path.clone(),
-                    ));
+                        self.errors.push(SyntaxError::new_with_context(
+                            SyntaxErrorKind::UnexpectedCharacter,
+                            "identifiers cannot start with a digit",
+                            self.ln,
+                            self.current_line(),
+                            self.col - self.value_buf.count(),
+                            self.col,
+                            self.src.path.clone(),
+                        ));
+                    }
                 }
+                _ => {}
             }
 
             self.value_buf.push(ch);
 
             debug!(
-                &self.debug,
                 "pushed {ch} to buffer\ncurrent value: {}\ncurrent kind: {:?}\nlocation: ({}, {})\n",
                 self.value_buf,
                 self.kind_buf,
@@ -155,8 +148,7 @@ impl<'a> Lexer<'a> {
 
         self.tokens.push_new(self.ln, self.col + 1, EOF, None);
 
-        info!(
-            &self.debug,
+        debug!(
             "== LEXER FINISHED ==\nelapsed time: {}μs = {}ms\ntotal tokens: {}\n",
             stopwatch.micros(),
             stopwatch.millis(),
@@ -164,6 +156,10 @@ impl<'a> Lexer<'a> {
         );
 
         return (&self.tokens, &self.errors);
+    }
+
+    fn current_line(&self) -> String {
+        self.src.lines[self.ln - 1].to_string()
     }
 
     fn process_keyword(&mut self) {
@@ -186,25 +182,26 @@ impl<'a> Lexer<'a> {
     }
 
     fn process_complex_punctuation(&mut self, ch: char) {
-        if self.punct_buf.value.clone() == "." {
-            self.recognize_dot(ch);
-        } else if self.punct_buf.value.clone() == "-" {
-            self.recognize_minus(ch);
-        } else {
-            self.tokens.push_new_not_empty(
-                self.ln,
-                self.col - self.value_buf.count() - self.punct_buf.count(),
-                self.kind_buf.clone(),
-                self.value_buf.value.clone(),
-            );
-            self.reset_buffers();
+        match self.punct_buf.value.as_str() {
+            "." => {
+                self.recognize_dot(ch);
+            }
+            "-" => {
+                self.recognize_minus(ch);
+            }
+            _ => {
+                self.tokens.push_new_not_empty(
+                    self.ln,
+                    self.col - self.value_buf.count() - self.punct_buf.count(),
+                    self.kind_buf.clone(),
+                    self.value_buf.value.clone(),
+                );
+                self.reset_buffers();
 
-            debug!(
-                &self.debug,
-                "starting decomposing \"{ch}\" to multiple tokens\n"
-            );
+                debug!("starting decomposing \"{ch}\" to multiple tokens\n");
 
-            self.decompose_complex_punctuation();
+                self.decompose_complex_punctuation();
+            }
         }
 
         self.punct_buf = LexerValueBuffer::new();
@@ -212,12 +209,12 @@ impl<'a> Lexer<'a> {
 
     fn recognize_dot(&mut self, ch: char) {
         if ch.is_digit(10) {
-            debug!(&self.debug, "recognized \".\" as a part of float\n");
+            debug!("recognized \".\" as a part of float\n");
 
             self.kind_buf = Literal(Float);
             self.value_buf.push('.');
         } else {
-            debug!(&self.debug, "recognized \".\" as a member separator\n");
+            debug!("recognized \".\" as a member separator\n");
 
             self.tokens.push_new_not_empty(
                 self.ln,
@@ -242,7 +239,7 @@ impl<'a> Lexer<'a> {
             && let Literal(lit) = &self.kind_buf
             && lit.is_number()
         {
-            debug!(&self.debug, "recognized \"-\" as a part of E notation\n");
+            debug!("recognized \"-\" as a part of E notation\n");
 
             self.kind_buf = Literal(Float);
             self.value_buf.push('-');
@@ -255,7 +252,7 @@ impl<'a> Lexer<'a> {
             );
             self.reset_buffers();
 
-            debug!(&self.debug, "recognized \"-\" as a minus operator\n");
+            debug!("recognized \"-\" as a minus operator\n");
 
             self.tokens.push_new(
                 self.ln,

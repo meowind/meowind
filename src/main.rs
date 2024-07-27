@@ -7,11 +7,11 @@ pub mod utils;
 
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
-    frontend::lexing::lexer::Lexer,
+    frontend::lexing::Lexer,
     structs::{MeowindArguments, MeowindScriptSource},
-    utils::{debug::Debugger, string::*},
+    utils::colors::*,
 };
-use std::{cell::RefCell, env, fs, io::ErrorKind, path::PathBuf, process};
+use std::{env, fs, io::ErrorKind, path::PathBuf, process};
 
 fn main() {
     let args = parse_arguments();
@@ -24,14 +24,15 @@ fn main() {
         args.path.display()
     );
 
-    let mut debugger = Debugger::new(args.path.clone(), true, false);
-    let debugger = &RefCell::new(&mut debugger);
-
-    let mut lexer = Lexer::new(source, &debugger);
+    let mut lexer = Lexer::new(source);
     let (tokens, errors) = lexer.tokenize();
     errors.throw_if_there();
 
-    info!(&debugger, "== OUTPUT TOKENS ==");
+    // TODO: токены в будущем нада но щяс затычка чтоб варна не было
+    #[cfg(not(debug_assertions))]
+    let _ = tokens;
+
+    debug!("== OUTPUT TOKENS ==");
 
     #[cfg(debug_assertions)]
     let tokens_info = tokens
@@ -40,8 +41,7 @@ fn main() {
         .collect::<Vec<_>>()
         .join("\n");
 
-    info!(&debugger, "{tokens_info}");
-    write_logs!(debugger);
+    debug!("{}", tokens_info);
 
     println!(
         "{GREEN}{BOLD}successfully compiled{WHITE} {}{RESET}",
