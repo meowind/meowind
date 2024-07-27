@@ -1,10 +1,10 @@
-use std::{fmt, slice, str::FromStr};
+use std::{fmt, str::FromStr};
 
 pub struct Token {
-    ln: usize,
-    col: usize,
-    kind: TokenKind,
-    value: Option<String>,
+    pub ln: usize,
+    pub col: usize,
+    pub kind: TokenKind,
+    pub value: Option<String>,
 }
 
 impl Token {
@@ -156,47 +156,6 @@ impl FromStr for ComplexPunctuationKind {
             "::" => Ok(Self::NamespaceSeparator),
             _ => Err(()),
         }
-    }
-}
-
-pub struct Tokens {
-    pub vector: Vec<Token>,
-}
-
-impl Tokens {
-    pub fn new() -> Tokens {
-        Tokens { vector: Vec::new() }
-    }
-
-    pub fn push(&mut self, token: Token) {
-        self.vector.push(token);
-    }
-
-    pub fn push_not_empty(&mut self, token: Token) {
-        if let Some(value) = &token.value {
-            if value.is_empty() {
-                return;
-            }
-        }
-
-        self.push(token);
-    }
-
-    pub fn push_new(&mut self, ln: usize, col: usize, kind: TokenKind, value: Option<String>) {
-        let token = Token::new(ln, col, kind, value);
-        self.vector.push(token);
-    }
-
-    pub fn push_new_not_empty(&mut self, ln: usize, col: usize, kind: TokenKind, value: String) {
-        if value.is_empty() {
-            return;
-        }
-
-        self.push(Token::new(ln, col, kind, Some(value)));
-    }
-
-    pub fn iter(&self) -> slice::Iter<Token> {
-        self.vector.iter()
     }
 }
 

@@ -5,24 +5,24 @@ pub mod context;
 pub mod syntax;
 
 pub struct MeowindErrorList<T: MeowindError> {
-    pub errors: Vec<T>,
+    pub vector: Vec<T>,
 }
 
 impl<T: MeowindError> MeowindErrorList<T> {
     pub fn new() -> MeowindErrorList<T> {
-        MeowindErrorList { errors: Vec::new() }
+        MeowindErrorList { vector: Vec::new() }
     }
 
     pub fn push(&mut self, error: T) {
-        self.errors.push(error);
+        self.vector.push(error);
     }
 
     pub fn throw_if_there(&self) {
-        if self.errors.len() == 0 {
+        if self.vector.len() == 0 {
             return;
         }
 
-        for error in &self.errors {
+        for error in &self.vector {
             println!("{}", error.to_string());
         }
 

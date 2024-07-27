@@ -6,7 +6,6 @@ use super::tokens::{
     LiteralKind::*,
     SimplePunctuationKind, Token,
     TokenKind::{self, *},
-    Tokens,
 };
 use crate::{
     errors::{
@@ -21,7 +20,7 @@ use unicode_segmentation::UnicodeSegmentation;
 pub struct Lexer<'a> {
     pub src: MeowindScriptSource<'a>,
 
-    tokens: Tokens,
+    tokens: Vec<Token>,
     errors: MeowindErrorList<SyntaxError>,
 
     ln: usize,
@@ -35,7 +34,7 @@ impl<'a> Lexer<'a> {
     pub fn new(source: MeowindScriptSource) -> Lexer {
         Lexer {
             src: source,
-            tokens: Tokens::new(),
+            tokens: Vec::new(),
             errors: MeowindErrorList::new(),
 
             ln: 1,
@@ -46,100 +45,100 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self) -> (&Tokens, &MeowindErrorList<SyntaxError>) {
-        self.tokens.vector.clear();
-        self.errors.errors.clear();
+    pub fn tokenize(&mut self) -> (&Vec<Token>, &MeowindErrorList<SyntaxError>) {
+        self.tokens.clear();
+        self.errors.vector.clear();
         self.reset_buffers();
 
-        for ch in self.src.contents.clone().chars() {
-            if ch == '\n' {
-                self.ln += 1;
-                self.col = 0;
-
-                self.process_keyword();
-                continue;
-            }
-            self.col += 1;
-
-            if let Ok(kind) = SimplePunctuationKind::from_char(ch) {
-                if !self.punct_buf.is_empty() {
-                    self.process_complex_punctuation(ch);
-                } else {
-                    self.tokens.push_not_empty(Token::new(
-                        self.ln,
-                        self.col - self.value_buf.count(),
-                        self.kind_buf.clone(),
-                        Some(self.value_buf.value.clone()),
-                    ));
-                }
-                self.reset_buffers();
-
-                self.tokens
-                    .push_new(self.ln, self.col, SimplePunctuation(kind), None);
-                continue;
-            }
-
-            if ch.is_ascii_punctuation() && ch != '_' {
-                self.punct_buf.push(ch);
-                continue;
-            }
-
-            if !self.punct_buf.is_empty() {
-                self.process_complex_punctuation(ch);
-            }
-
-            if ch.is_whitespace() {
-                self.process_keyword();
-                continue;
-            }
-
-            match &self.kind_buf {
-                Undefined => {
-                    if ch.is_alphabetic() || ch == '_' {
-                        self.kind_buf = Identifier;
-                    } else if ch.is_digit(10) {
-                        self.kind_buf = Literal(Integer);
-                    }
-                }
-                Literal(lit) if lit.is_number() => {
-                    if ch.is_alphabetic() && ch != 'E' && ch != 'e' {
-                        self.kind_buf = InvalidIdentifier;
-
-                        self.errors.push(SyntaxError::new_with_context(
-                            SyntaxErrorKind::UnexpectedCharacter,
-                            "identifiers cannot start with a digit",
-                            self.ln,
-                            self.current_line(),
-                            self.col - self.value_buf.count(),
-                            self.col,
-                            self.src.path.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            }
-
-            self.value_buf.push(ch);
+        for ch in self.src.contents.chars() {
+            self.iteration(ch);
         }
+        self.iteration('\0');
 
-        self.tokens.push_new(self.ln, self.col + 1, EOF, None);
+        self.push_new(self.ln, self.col, EOF, None);
         return (&self.tokens, &self.errors);
     }
 
-    fn current_line(&self) -> String {
-        self.src.lines[self.ln - 1].to_string()
+    fn iteration(&mut self, ch: char) {
+        if ch == '\n' {
+            self.ln += 1;
+            self.col = 0;
+
+            self.process_keyword();
+            return;
+        }
+        self.col += 1;
+
+        if let Ok(kind) = SimplePunctuationKind::from_char(ch) {
+            if !self.punct_buf.is_empty() {
+                self.process_complex_punctuation(ch);
+            } else {
+                self.push_not_empty(Token::new(
+                    self.ln,
+                    self.col - self.value_buf.count(),
+                    self.kind_buf.clone(),
+                    Some(self.value_buf.value.clone()),
+                ));
+            }
+            self.reset_buffers();
+
+            self.push_new(self.ln, self.col, SimplePunctuation(kind), None);
+            return;
+        }
+
+        if ch.is_ascii_punctuation() && ch != '_' {
+            self.punct_buf.push(ch);
+            return;
+        }
+
+        if !self.punct_buf.is_empty() {
+            self.process_complex_punctuation(ch);
+        }
+
+        if ch.is_whitespace() {
+            self.process_keyword();
+            return;
+        }
+
+        match &self.kind_buf {
+            Undefined => {
+                if ch.is_alphabetic() || ch == '_' {
+                    self.kind_buf = Identifier;
+                } else if ch.is_digit(10) {
+                    self.kind_buf = Literal(Integer);
+                }
+            }
+            Literal(lit) if lit.is_number() => {
+                if ch.is_alphabetic() && ch != 'E' && ch != 'e' {
+                    self.kind_buf = InvalidIdentifier;
+
+                    self.errors.push(SyntaxError::new_with_context(
+                        SyntaxErrorKind::UnexpectedCharacter,
+                        "identifiers cannot start with a digit",
+                        self.ln,
+                        self.current_line(),
+                        self.col - self.value_buf.count(),
+                        self.col,
+                        self.src.path.clone(),
+                    ));
+                }
+            }
+            _ => {}
+        }
+
+        self.value_buf.push(ch);
     }
 
     fn process_keyword(&mut self) {
         if let Ok(kind) = KeywordKind::from_str(&self.value_buf.value) {
-            self.tokens.push_new(
+            self.push_new(
                 self.ln,
                 self.col - self.value_buf.count(),
                 Keyword(kind),
                 None,
             );
         } else {
-            self.tokens.push_new_not_empty(
+            self.push_new_not_empty(
                 self.ln,
                 self.col - self.value_buf.count(),
                 self.kind_buf.clone(),
@@ -158,7 +157,7 @@ impl<'a> Lexer<'a> {
                 self.recognize_minus(ch);
             }
             _ => {
-                self.tokens.push_new_not_empty(
+                self.push_new_not_empty(
                     self.ln,
                     self.col - self.value_buf.count() - self.punct_buf.count(),
                     self.kind_buf.clone(),
@@ -178,7 +177,7 @@ impl<'a> Lexer<'a> {
             self.kind_buf = Literal(Float);
             self.value_buf.push('.');
         } else {
-            self.tokens.push_new_not_empty(
+            self.push_new_not_empty(
                 self.ln,
                 self.col - self.value_buf.count(),
                 self.kind_buf.clone(),
@@ -186,7 +185,7 @@ impl<'a> Lexer<'a> {
             );
             self.reset_buffers();
 
-            self.tokens.push_new(
+            self.push_new(
                 self.ln,
                 self.col - 1,
                 ComplexPunctuation(MemberSeparator),
@@ -204,7 +203,7 @@ impl<'a> Lexer<'a> {
             self.kind_buf = Literal(Float);
             self.value_buf.push('-');
         } else {
-            self.tokens.push_new_not_empty(
+            self.push_new_not_empty(
                 self.ln,
                 self.col - self.value_buf.count() - 1,
                 self.kind_buf.clone(),
@@ -212,7 +211,7 @@ impl<'a> Lexer<'a> {
             );
             self.reset_buffers();
 
-            self.tokens.push_new(
+            self.push_new(
                 self.ln,
                 self.col - 1,
                 ComplexPunctuation(OperatorMinus),
@@ -224,12 +223,11 @@ impl<'a> Lexer<'a> {
     fn decompose_complex_punctuation(&mut self) {
         if self.punct_buf.count() == 1 {
             if let Ok(kind) = ComplexPunctuationKind::from_str(&self.punct_buf.value) {
-                self.tokens
-                    .push_new(self.ln, self.col - 1, ComplexPunctuation(kind), None);
+                self.push_new(self.ln, self.col - 1, ComplexPunctuation(kind), None);
 
                 return;
             } else {
-                self.tokens.push_new(
+                self.push_new(
                     self.ln,
                     self.col - 1,
                     Undefined,
@@ -257,7 +255,7 @@ impl<'a> Lexer<'a> {
             }
 
             if valid_punct_kind == Undefined {
-                self.tokens.push_new(
+                self.push_new(
                     self.ln,
                     self.col - self.punct_buf.count() + from_char_idx,
                     valid_punct_kind.clone(),
@@ -267,7 +265,7 @@ impl<'a> Lexer<'a> {
                 break;
             }
 
-            self.tokens.push_new(
+            self.push_new(
                 self.ln,
                 self.col - self.punct_buf.count() + from_char_idx,
                 valid_punct_kind.clone(),
@@ -276,9 +274,52 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn push(&mut self, token: Token) {
+        if token.kind == Undefined {
+            self.errors.push(SyntaxError::new_with_context(
+                SyntaxErrorKind::InvalidToken,
+                "got undefined token",
+                self.ln,
+                self.current_line(),
+                self.col - self.value_buf.count() - self.punct_buf.count(),
+                self.col,
+                self.src.path.clone(),
+            ))
+        }
+
+        self.tokens.push(token);
+    }
+
+    fn push_not_empty(&mut self, token: Token) {
+        if let Some(value) = &token.value {
+            if value.is_empty() {
+                return;
+            }
+        }
+
+        self.push(token);
+    }
+
+    fn push_new(&mut self, ln: usize, col: usize, kind: TokenKind, value: Option<String>) {
+        let token = Token::new(ln, col, kind, value);
+        self.push(token);
+    }
+
+    fn push_new_not_empty(&mut self, ln: usize, col: usize, kind: TokenKind, value: String) {
+        if value.is_empty() {
+            return;
+        }
+
+        self.push(Token::new(ln, col, kind, Some(value)));
+    }
+
     fn reset_buffers(&mut self) {
         self.value_buf = LexerValueBuffer::new();
         self.kind_buf = Undefined;
+    }
+
+    fn current_line(&self) -> String {
+        self.src.lines[self.ln - 1].to_string()
     }
 }
 
