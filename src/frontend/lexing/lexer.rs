@@ -49,13 +49,17 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(&mut self) -> (&Vec<Token>, &MeowindErrorList<SyntaxError>) {
+        self.tokens.clear();
+        self.errors.vector.clear();
+
+        if self.src.contents.is_empty() {
+            return (&self.tokens, &self.errors);
+        }
+
         self.ln = 1;
         self.col = 0;
 
-        self.tokens.clear();
-        self.errors.vector.clear();
         self.reset_buffers();
-
         self.inside_string = false;
 
         for ch in self.src.contents.chars() {
