@@ -5,7 +5,8 @@ pub mod frontend;
 pub mod structs;
 pub mod utils;
 
-use utils::colors;
+#[cfg(debug_assertions)]
+use std::time::Instant;
 
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
@@ -13,11 +14,11 @@ use crate::{
     structs::{MeowindArguments, MeowindScriptSource},
     utils::colors::*,
 };
-use std::{env, fs, io::ErrorKind, path::PathBuf, process, time::Instant};
+use std::{env, fs, io::ErrorKind, path::PathBuf, process};
 
 fn main() {
     #[cfg(windows)]
-    colors::init_windows_colors();
+    init_windows_colors();
 
     let args = parse_arguments();
 
@@ -29,6 +30,7 @@ fn main() {
         args.path.display()
     );
 
+    #[cfg(debug_assertions)]
     let lexer_start = Instant::now();
     let mut lexer = Lexer::new(source);
     let (tokens, errors) = lexer.tokenize();
