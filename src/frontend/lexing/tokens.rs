@@ -37,6 +37,7 @@ pub enum TokenKind {
 pub enum LiteralKind {
     Integer,
     Float,
+    String,
 }
 
 impl LiteralKind {
@@ -53,6 +54,7 @@ pub enum KeywordKind {
     Pub,
     Const,
     Static,
+    Use,
 }
 
 impl FromStr for KeywordKind {
@@ -66,6 +68,7 @@ impl FromStr for KeywordKind {
             "pub" => Ok(Self::Pub),
             "const" => Ok(Self::Const),
             "static" => Ok(Self::Static),
+            "use" => Ok(Self::Use),
             _ => Err(()),
         }
     }
@@ -80,6 +83,7 @@ pub enum SimplePunctuationKind {
     BracketOpen,
     BracketClose,
     Semicolon,
+    Comma,
 }
 
 impl SimplePunctuationKind {
@@ -92,6 +96,7 @@ impl SimplePunctuationKind {
             '[' => Ok(Self::BracketOpen),
             ']' => Ok(Self::BracketClose),
             ';' => Ok(Self::Semicolon),
+            ',' => Ok(Self::Comma),
             _ => Err(()),
         }
     }
@@ -108,9 +113,7 @@ pub enum ComplexPunctuationKind {
 
     OperatorEqual,
     OperatorNotEqual,
-    OperatorLess,
     OperatorLessEqual,
-    OperatorGreater,
     OperatorGreaterEqual,
 
     Assignment,
@@ -123,6 +126,9 @@ pub enum ComplexPunctuationKind {
 
     MemberSeparator,
     NamespaceSeparator,
+
+    AngleOpen,
+    AngleClose,
 }
 
 impl FromStr for ComplexPunctuationKind {
@@ -139,8 +145,6 @@ impl FromStr for ComplexPunctuationKind {
 
             "==" => Ok(Self::OperatorEqual),
             "!=" => Ok(Self::OperatorNotEqual),
-            "<" => Ok(Self::OperatorLess),
-            ">" => Ok(Self::OperatorGreater),
             "<=" => Ok(Self::OperatorLessEqual),
             ">=" => Ok(Self::OperatorGreaterEqual),
 
@@ -154,6 +158,9 @@ impl FromStr for ComplexPunctuationKind {
 
             "." => Ok(Self::MemberSeparator),
             "::" => Ok(Self::NamespaceSeparator),
+
+            "<" => Ok(Self::AngleOpen),
+            ">" => Ok(Self::AngleClose),
             _ => Err(()),
         }
     }

@@ -30,7 +30,7 @@ impl MeowindErrorContext {
     }
 
     pub fn body(&self, extends: usize) -> String {
-        let content_graphemes: Vec<&str> = self.ln_content.trim().graphemes(true).collect();
+        let content_graphemes: Vec<&str> = self.ln_content.graphemes(true).collect();
 
         let start_idx = self.start_col - extends.min(self.start_col);
         let end_idx = (self.end_col + extends).min(content_graphemes.len());
@@ -44,18 +44,19 @@ impl MeowindErrorContext {
         ln_content.insert(highlight_start_idx, WHITE);
         ln_content.insert(highlight_start_idx, UNDERLINE);
 
+        let mut ln_content = ln_content.join("").trim().to_owned();
+
         if start_idx > 0 {
-            ln_content.insert(0, "... ");
+            ln_content.insert_str(0, "... ");
         }
 
         if end_idx < content_graphemes.len() {
-            ln_content.push(" ...");
+            ln_content.push_str(" ...");
         }
 
-        ln_content.insert(0, GRAY);
-        ln_content.push(RESET);
+        ln_content.insert_str(0, GRAY);
+        ln_content.push_str(RESET);
 
-        let ln_content = ln_content.join("");
         return format!(
             "{BOLD}{}:({}, {}){RESET}: {ln_content}",
             self.source_path.display(),

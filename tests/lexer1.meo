@@ -1,1 +1,15 @@
-const float constant_variable = 50 + (16.0 - 52.4) * (25.55555 / (20 % 15 ** 4));
+use std::{console, Dict}
+
+const int constant = 5 + (4 - (3 * (2 / (1 % (0 ** -1)))));
+    
+static Dict<int, string> = Dict.new([
+    (1, "one"),
+    (2, "two"),
+    (3, "three"),
+    (4, "four"),
+    (5, "five")
+]);
+
+func hello() {
+    console::push_line("fif fif fif fif ie");
+}

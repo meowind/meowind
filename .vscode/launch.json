@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceRoot}/target/debug/meowind",
-            "args": ["../../tests/lexer1.meo"],
+            "args": ["../../tests/lexer2.meo"],
             "cwd": "${workspaceRoot}/target/debug/",
             "sourceLanguages": ["rust"]
         }

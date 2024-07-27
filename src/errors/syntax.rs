@@ -58,6 +58,7 @@ impl MeowindError for SyntaxError {
 }
 
 pub enum SyntaxErrorKind {
+    ExpectedCharacter,
     UnexpectedCharacter,
     UnexpectedToken,
     InvalidToken,
@@ -66,6 +67,7 @@ pub enum SyntaxErrorKind {
 impl fmt::Display for SyntaxErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let text = match self {
+            SyntaxErrorKind::ExpectedCharacter => "expected character",
             SyntaxErrorKind::UnexpectedCharacter => "unexpected character",
             SyntaxErrorKind::UnexpectedToken => "unexpected token",
             SyntaxErrorKind::InvalidToken => "invalid token",
