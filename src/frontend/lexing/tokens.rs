@@ -1,20 +1,16 @@
 use std::{fmt, str::FromStr};
 
+use crate::frontend::Location;
+
 pub struct Token {
-    pub ln: usize,
-    pub col: usize,
+    pub loc: Location,
     pub kind: TokenKind,
     pub value: Option<String>,
 }
 
 impl Token {
-    pub fn new(ln: usize, col: usize, kind: TokenKind, value: Option<String>) -> Token {
-        Token {
-            ln,
-            col,
-            kind,
-            value,
-        }
+    pub fn new(loc: Location, kind: TokenKind, value: Option<String>) -> Token {
+        Token { loc, kind, value }
     }
 }
 
@@ -177,7 +173,7 @@ impl fmt::Display for Token {
         write!(
             f,
             "(ln: {}, col: {}) {:?}{}",
-            self.ln, self.col, self.kind, value
+            self.loc.ln, self.loc.start_col, self.kind, value
         )
     }
 }

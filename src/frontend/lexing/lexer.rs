@@ -12,6 +12,7 @@ use crate::{
         syntax::{SyntaxError, SyntaxErrorKind},
         MeowindErrorList,
     },
+    frontend::Location,
     structs::MeowindScriptSource,
 };
 use std::{fmt, str::FromStr, string::String as StdString};
@@ -23,8 +24,8 @@ pub struct Lexer<'a> {
     tokens: Vec<Token>,
     errors: MeowindErrorList<SyntaxError>,
 
-    ln: usize,
-    col: usize,
+    cur_ln: usize,
+    cur_col: usize,
     kind_buf: TokenKind,
     value_buf: LexerValueBuffer,
     punct_buf: LexerValueBuffer,
@@ -39,8 +40,8 @@ impl<'a> Lexer<'a> {
             tokens: Vec::new(),
             errors: MeowindErrorList::new(),
 
-            ln: 1,
-            col: 0,
+            cur_ln: 1,
+            cur_col: 0,
             kind_buf: Undefined,
             value_buf: LexerValueBuffer::new(),
             punct_buf: LexerValueBuffer::new(),
@@ -56,8 +57,8 @@ impl<'a> Lexer<'a> {
             return (&self.tokens, &self.errors);
         }
 
-        self.ln = 1;
-        self.col = 0;
+        self.cur_ln = 1;
+        self.cur_col = 0;
 
         self.reset_buffers();
         self.inside_string = false;
@@ -67,7 +68,11 @@ impl<'a> Lexer<'a> {
         }
         self.iteration('\0', true);
 
-        self.push_new(self.ln, self.col, EOF, None);
+        self.push_new(
+            Location::new(self.cur_ln, self.cur_col, self.cur_col),
+            EOF,
+            None,
+        );
         return (&self.tokens, &self.errors);
     }
 
@@ -80,22 +85,20 @@ impl<'a> Lexer<'a> {
             return;
         }
 
-        self.col += 1;
+        self.cur_col += 1;
 
         if last {
             if self.inside_string {
                 self.errors.push(SyntaxError::new_with_context(
                     SyntaxErrorKind::ExpectedCharacter,
                     "expected quote to close string literal",
-                    self.ln,
+                    Location::new(self.cur_ln, self.cur_col, self.cur_col + 1),
                     self.current_line(),
-                    self.col,
-                    self.col + 1,
                     self.src.path.clone(),
                 ));
             }
 
-            self.push_keyword_or_ident(self.col - self.value_buf.count());
+            self.push_keyword_or_ident(self.cur_col - self.value_buf.count());
             return;
         }
 
@@ -104,10 +107,12 @@ impl<'a> Lexer<'a> {
                 self.errors.push(SyntaxError::new_with_context(
                     SyntaxErrorKind::ExpectedCharacter,
                     "regular string literals cannot be over multiple lines",
-                    self.ln,
+                    Location::new(
+                        self.cur_ln,
+                        self.cur_col - self.value_buf.count(),
+                        self.cur_col,
+                    ),
                     self.current_line(),
-                    self.col - self.value_buf.count(),
-                    self.col,
                     self.src.path.clone(),
                 ));
                 self.inside_string = false;
@@ -116,12 +121,12 @@ impl<'a> Lexer<'a> {
                 if !self.punct_buf.is_empty() {
                     self.process_complex_punctuation('\n');
                 } else {
-                    self.push_keyword_or_ident(self.col - self.value_buf.count());
+                    self.push_keyword_or_ident(self.cur_col - self.value_buf.count());
                 }
             }
 
-            self.ln += 1;
-            self.col = 0;
+            self.cur_ln += 1;
+            self.cur_col = 0;
 
             return;
         }
@@ -130,12 +135,15 @@ impl<'a> Lexer<'a> {
             self.inside_string = !self.inside_string;
 
             if self.inside_string {
-                self.push_keyword_or_ident(self.col - self.value_buf.count());
+                self.push_keyword_or_ident(self.cur_col - self.value_buf.count());
                 self.kind_buf = Literal(String);
             } else {
                 self.push_new(
-                    self.ln,
-                    self.col - self.value_buf.count() - 1,
+                    Location::new(
+                        self.cur_ln,
+                        self.cur_col - self.value_buf.count() - 1,
+                        self.cur_col,
+                    ),
                     Literal(String),
                     Some(self.value_buf.value.clone()),
                 );
@@ -156,10 +164,14 @@ impl<'a> Lexer<'a> {
             if !self.punct_buf.is_empty() {
                 self.process_complex_punctuation(ch);
             } else {
-                self.push_keyword_or_ident(self.col - self.value_buf.count());
+                self.push_keyword_or_ident(self.cur_col - self.value_buf.count());
             }
 
-            self.push_new(self.ln, self.col, SimplePunctuation(kind), None);
+            self.push_new(
+                Location::new(self.cur_ln, self.cur_col, self.cur_col + 1),
+                SimplePunctuation(kind),
+                None,
+            );
             return;
         }
 
@@ -173,7 +185,7 @@ impl<'a> Lexer<'a> {
         }
 
         if ch.is_whitespace() {
-            self.push_keyword_or_ident(self.col - self.value_buf.count());
+            self.push_keyword_or_ident(self.cur_col - self.value_buf.count());
             return;
         }
 
@@ -192,10 +204,12 @@ impl<'a> Lexer<'a> {
                     self.errors.push(SyntaxError::new_with_context(
                         SyntaxErrorKind::UnexpectedCharacter,
                         "identifiers cannot start with a digit",
-                        self.ln,
+                        Location::new(
+                            self.cur_ln,
+                            self.cur_col - self.value_buf.count(),
+                            self.cur_col,
+                        ),
                         self.current_line(),
-                        self.col - self.value_buf.count(),
-                        self.col,
                         self.src.path.clone(),
                     ));
                 }
@@ -208,11 +222,14 @@ impl<'a> Lexer<'a> {
 
     fn push_keyword_or_ident(&mut self, col: usize) {
         if let Ok(kind) = KeywordKind::from_str(&self.value_buf.value) {
-            self.push_new(self.ln, col, Keyword(kind), None);
+            self.push_new(
+                Location::new(self.cur_ln, col, self.cur_col),
+                Keyword(kind),
+                None,
+            );
         } else {
             self.push_new_not_empty(
-                self.ln,
-                col,
+                Location::new(self.cur_ln, col, self.cur_col),
                 self.kind_buf.clone(),
                 self.value_buf.value.clone(),
             );
@@ -230,7 +247,7 @@ impl<'a> Lexer<'a> {
             }
             _ => {
                 self.push_keyword_or_ident(
-                    self.col - self.value_buf.count() - self.punct_buf.count(),
+                    self.cur_col - self.value_buf.count() - self.punct_buf.count(),
                 );
                 self.decompose_complex_punctuation();
             }
@@ -244,11 +261,10 @@ impl<'a> Lexer<'a> {
             self.kind_buf = Literal(Float);
             self.value_buf.push('.');
         } else {
-            self.push_keyword_or_ident(self.col - self.value_buf.count() - 1);
+            self.push_keyword_or_ident(self.cur_col - self.value_buf.count() - 1);
 
             self.push_new(
-                self.ln,
-                self.col - 1,
+                Location::new(self.cur_ln, self.cur_col - 1, self.cur_col),
                 ComplexPunctuation(MemberSeparator),
                 None,
             );
@@ -264,11 +280,10 @@ impl<'a> Lexer<'a> {
             self.kind_buf = Literal(Float);
             self.value_buf.push('-');
         } else {
-            self.push_keyword_or_ident(self.col - self.value_buf.count() - 1);
+            self.push_keyword_or_ident(self.cur_col - self.value_buf.count() - 1);
 
             self.push_new(
-                self.ln,
-                self.col - 1,
+                Location::new(self.cur_ln, self.cur_col - 1, self.cur_col),
                 ComplexPunctuation(OperatorMinus),
                 None,
             );
@@ -278,13 +293,16 @@ impl<'a> Lexer<'a> {
     fn decompose_complex_punctuation(&mut self) {
         if self.punct_buf.count() == 1 {
             if let Ok(kind) = ComplexPunctuationKind::from_str(&self.punct_buf.value) {
-                self.push_new(self.ln, self.col - 1, ComplexPunctuation(kind), None);
+                self.push_new(
+                    Location::new(self.cur_ln, self.cur_col - 1, self.cur_col),
+                    ComplexPunctuation(kind),
+                    None,
+                );
 
                 return;
             } else {
                 self.push_new(
-                    self.ln,
-                    self.col - 1,
+                    Location::new(self.cur_ln, self.cur_col - 1, self.cur_col),
                     Undefined,
                     Some(self.punct_buf.value.clone()),
                 );
@@ -311,8 +329,11 @@ impl<'a> Lexer<'a> {
 
             if valid_punct_kind == Undefined {
                 self.push_new(
-                    self.ln,
-                    self.col - self.punct_buf.count() + from_char_idx,
+                    Location::new(
+                        self.cur_ln,
+                        self.cur_col - self.punct_buf.count() + from_char_idx,
+                        self.cur_col,
+                    ),
                     valid_punct_kind.clone(),
                     Some(current_punct_buf),
                 );
@@ -321,8 +342,11 @@ impl<'a> Lexer<'a> {
             }
 
             self.push_new(
-                self.ln,
-                self.col - self.punct_buf.count() + from_char_idx,
+                Location::new(
+                    self.cur_ln,
+                    self.cur_col - self.punct_buf.count() + from_char_idx,
+                    self.cur_col,
+                ),
                 valid_punct_kind.clone(),
                 None,
             );
@@ -340,10 +364,12 @@ impl<'a> Lexer<'a> {
             self.errors.push(SyntaxError::new_with_context(
                 SyntaxErrorKind::InvalidToken,
                 message,
-                self.ln,
+                Location::new(
+                    self.cur_ln,
+                    self.cur_col - self.punct_buf.count(),
+                    self.cur_col,
+                ),
                 self.current_line(),
-                self.col - self.punct_buf.count(),
-                self.col,
                 self.src.path.clone(),
             ))
         }
@@ -351,17 +377,17 @@ impl<'a> Lexer<'a> {
         self.tokens.push(token);
     }
 
-    fn push_new(&mut self, ln: usize, col: usize, kind: TokenKind, value: Option<StdString>) {
-        let token = Token::new(ln, col, kind, value);
+    fn push_new(&mut self, loc: Location, kind: TokenKind, value: Option<StdString>) {
+        let token = Token::new(loc, kind, value);
         self.push(token);
     }
 
-    fn push_new_not_empty(&mut self, ln: usize, col: usize, kind: TokenKind, value: StdString) {
+    fn push_new_not_empty(&mut self, loc: Location, kind: TokenKind, value: StdString) {
         if value.is_empty() {
             return;
         }
 
-        self.push(Token::new(ln, col, kind, Some(value)));
+        self.push(Token::new(loc, kind, Some(value)));
     }
 
     fn reset_buffers(&mut self) {
@@ -370,7 +396,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn current_line(&self) -> StdString {
-        self.src.lines[self.ln - 1].to_string()
+        self.src.lines[self.cur_ln - 1].to_string()
     }
 }
 

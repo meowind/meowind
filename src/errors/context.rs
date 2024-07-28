@@ -1,67 +1,57 @@
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::utils::colors::*;
+use crate::{frontend::Location, utils::colors::*};
 use core::fmt;
 use std::path::PathBuf;
 
 pub struct MeowindErrorContext {
-    pub ln: usize,
-    pub ln_content: String,
-    pub start_col: usize,
-    pub end_col: usize,
-    pub source_path: PathBuf,
+    pub loc: Location,
+    pub ln_text: String,
+    pub src_path: PathBuf,
 }
 
 impl MeowindErrorContext {
-    pub fn new(
-        ln: usize,
-        ln_content: String,
-        start_col: usize,
-        end_col: usize,
-        source_path: PathBuf,
-    ) -> MeowindErrorContext {
+    pub fn new(loc: Location, ln_text: String, src_path: PathBuf) -> MeowindErrorContext {
         MeowindErrorContext {
-            ln,
-            ln_content,
-            start_col,
-            end_col,
-            source_path,
+            loc,
+            ln_text,
+            src_path,
         }
     }
 
     pub fn body(&self, extends: usize) -> String {
-        let content_graphemes: Vec<&str> = self.ln_content.graphemes(true).collect();
+        let content_graphemes: Vec<&str> = self.ln_text.graphemes(true).collect();
 
-        let start_idx = self.start_col - extends.min(self.start_col);
-        let end_idx = (self.end_col + extends).min(content_graphemes.len());
-        let mut ln_content = content_graphemes[start_idx..end_idx].to_owned();
+        let start_idx = self.loc.start_col - extends.min(self.loc.start_col);
+        let end_idx = (self.loc.end_col + extends).min(content_graphemes.len());
+        let mut ln_text = content_graphemes[start_idx..end_idx].to_owned();
 
-        let highlight_end_idx = self.end_col - start_idx - 1;
-        ln_content.insert(highlight_end_idx, GRAY);
-        ln_content.insert(highlight_end_idx, RESET);
+        let highlight_end_idx = self.loc.end_col - start_idx - 1;
+        ln_text.insert(highlight_end_idx, GRAY);
+        ln_text.insert(highlight_end_idx, RESET);
 
-        let highlight_start_idx = self.start_col - start_idx - 1;
-        ln_content.insert(highlight_start_idx, WHITE);
-        ln_content.insert(highlight_start_idx, UNDERLINE);
+        let highlight_start_idx = self.loc.start_col - start_idx - 1;
+        ln_text.insert(highlight_start_idx, WHITE);
+        ln_text.insert(highlight_start_idx, UNDERLINE);
 
-        let mut ln_content = ln_content.join("").trim().to_owned();
+        let mut ln_text = ln_text.join("").trim().to_owned();
 
         if start_idx > 0 {
-            ln_content.insert_str(0, "... ");
+            ln_text.insert_str(0, "... ");
         }
 
         if end_idx < content_graphemes.len() {
-            ln_content.push_str(" ...");
+            ln_text.push_str(" ...");
         }
 
-        ln_content.insert_str(0, GRAY);
-        ln_content.push_str(RESET);
+        ln_text.insert_str(0, GRAY);
+        ln_text.push_str(RESET);
 
         return format!(
-            "{BOLD}{}:({}, {}){RESET}: {ln_content}",
-            self.source_path.display(),
-            self.ln,
-            self.start_col
+            "{BOLD}{}:({}, {}){RESET}: {ln_text}",
+            self.src_path.display(),
+            self.loc.ln,
+            self.loc.start_col
         );
     }
 }
