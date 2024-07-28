@@ -11,5 +11,5 @@ static Dict<int, string> = Dict.new([
 ]);
 
 func hello() {
-    console::push_line("fif fif fif fif ie");
+    console::push_line("hello world!");
 }

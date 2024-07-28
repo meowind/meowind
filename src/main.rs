@@ -34,6 +34,12 @@ fn main() {
     let lexer_start = Instant::now();
     let mut lexer = Lexer::new(source);
     let (tokens, errors) = lexer.tokenize();
+
+    #[cfg(debug_assertions)]
+    let micros = lexer_start.elapsed().as_micros();
+    #[cfg(debug_assertions)]
+    let millis = lexer_start.elapsed().as_millis();
+
     errors.throw_if_there();
 
     // TODO: токены в будущем нада но щяс затычка чтоб варна не было
@@ -48,10 +54,8 @@ fn main() {
         .join("\n");
 
     debug!(
-        "lexer output:\n{}\nfinished in: {}us or {}ms",
-        tokens_info,
-        lexer_start.elapsed().as_micros(),
-        lexer_start.elapsed().as_millis()
+        "lexer output:\n{}\nlexer finished in: {}us or {}ms",
+        tokens_info, micros, millis
     );
 
     println!(

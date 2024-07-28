@@ -1,17 +1,17 @@
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{frontend::Location, utils::colors::*};
+use crate::{frontend::Loc, utils::colors::*};
 use core::fmt;
 use std::path::PathBuf;
 
 pub struct MeowindErrorContext {
-    pub loc: Location,
+    pub loc: Loc,
     pub ln_text: String,
     pub src_path: PathBuf,
 }
 
 impl MeowindErrorContext {
-    pub fn new(loc: Location, ln_text: String, src_path: PathBuf) -> MeowindErrorContext {
+    pub fn new(loc: Loc, ln_text: String, src_path: PathBuf) -> MeowindErrorContext {
         MeowindErrorContext {
             loc,
             ln_text,

@@ -1,4 +1,4 @@
-use crate::{frontend::Location, utils::colors::*};
+use crate::{frontend::Loc, utils::colors::*};
 use std::{fmt, path::PathBuf};
 
 use super::{context::MeowindErrorContext, MeowindError};
@@ -25,7 +25,7 @@ impl SyntaxError {
     pub fn new_with_context<T: ToString>(
         kind: SyntaxErrorKind,
         message: T,
-        loc: Location,
+        loc: Loc,
         ln_text: String,
         src_path: PathBuf,
     ) -> SyntaxError {

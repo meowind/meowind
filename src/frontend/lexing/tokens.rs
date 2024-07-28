@@ -1,15 +1,18 @@
-use std::{fmt, str::FromStr};
+use std::{
+    fmt::{self},
+    str::FromStr,
+};
 
-use crate::frontend::Location;
+use crate::{frontend::Loc, utils::colors::*};
 
 pub struct Token {
-    pub loc: Location,
+    pub loc: Loc,
     pub kind: TokenKind,
     pub value: Option<String>,
 }
 
 impl Token {
-    pub fn new(loc: Location, kind: TokenKind, value: Option<String>) -> Token {
+    pub fn new(loc: Loc, kind: TokenKind, value: Option<String>) -> Token {
         Token { loc, kind, value }
     }
 }
@@ -67,6 +70,12 @@ impl FromStr for KeywordKind {
             "use" => Ok(Self::Use),
             _ => Err(()),
         }
+    }
+}
+
+impl ToString for KeywordKind {
+    fn to_string(&self) -> String {
+        format!("{:?}", self).to_lowercase()
     }
 }
 
@@ -165,15 +174,32 @@ impl FromStr for ComplexPunctuationKind {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = if let Some(value) = &self.value {
-            format!(" \"{}\"", value)
+            if self.kind == TokenKind::Literal(LiteralKind::String) {
+                format!("\"{BOLD}{}\"{RESET}", value)
+            } else {
+                format!("{BOLD}{}{RESET}", value)
+            }
         } else {
             String::from("")
         };
 
-        write!(
-            f,
-            "(ln: {}, col: {}) {:?}{}",
-            self.loc.ln, self.loc.start_col, self.kind, value
-        )
+        let kind = match &self.kind {
+            TokenKind::Literal(kind) => format!("{:?}", kind),
+            TokenKind::Keyword(kind) => format!("Keyword {BOLD}{}{RESET}", kind.to_string()),
+            TokenKind::SimplePunctuation(kind) => {
+                format!("{:?}", kind)
+            }
+            TokenKind::ComplexPunctuation(kind) => {
+                format!("{:?}", kind)
+            }
+            _ => format!("{:?}", self.kind),
+        };
+
+        let loc = format!(
+            "{GRAY}l:{WHITE}{}{GRAY}, c:{WHITE}{}-{}{RESET}",
+            self.loc.ln, self.loc.start_col, self.loc.end_col
+        );
+
+        write!(f, "{:>38} | {} {}", loc, kind, value)
     }
 }
