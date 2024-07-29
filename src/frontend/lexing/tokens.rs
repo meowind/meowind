@@ -131,6 +131,7 @@ pub enum ComplexPunctuationKind {
 
     MemberSeparator,
     NamespaceSeparator,
+    Colon,
 
     AngleOpen,
     AngleClose,
@@ -163,6 +164,7 @@ impl FromStr for ComplexPunctuationKind {
 
             "." => Ok(Self::MemberSeparator),
             "::" => Ok(Self::NamespaceSeparator),
+            ":" => Ok(Self::Colon),
 
             "<" => Ok(Self::AngleOpen),
             ">" => Ok(Self::AngleClose),

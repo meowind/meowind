@@ -15,14 +15,14 @@ use crate::{
     frontend::Loc,
     structs::MeowindScriptSource,
 };
-use std::{fmt, str::FromStr, string::String as StdString};
+use std::{fmt, path::PathBuf, str::FromStr, string::String as StdString};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Lexer<'a> {
     pub src: MeowindScriptSource<'a>,
 
-    tokens: Vec<Token>,
-    errors: MeowindErrorList<SyntaxError>,
+    pub tokens: Vec<Token>,
+    pub errors: MeowindErrorList<SyntaxError>,
 
     cur_ln: usize,
     cur_col: usize,
@@ -38,33 +38,22 @@ impl<'a> Lexer<'a> {
     pub fn new(source: MeowindScriptSource) -> Lexer {
         Lexer {
             src: source,
-            tokens: Vec::new(),
-            errors: MeowindErrorList::new(),
 
-            cur_ln: 1,
-            cur_col: 0,
-            start_col_buf: 1,
-            kind_buf: Undefined,
-            value_buf: LexerValueBuffer::new(),
-            punct_buf: LexerValueBuffer::new(),
-            inside_string: false,
+            ..Default::default()
         }
     }
 
-    pub fn tokenize(&mut self) -> (&Vec<Token>, &MeowindErrorList<SyntaxError>) {
-        self.tokens.clear();
-        self.errors.vector.clear();
+    pub fn tokenize(source: MeowindScriptSource<'a>) -> Lexer<'a> {
+        let mut lexer = Lexer::new(source);
+        lexer.process();
 
+        return lexer;
+    }
+
+    fn process(&mut self) {
         if self.src.contents.is_empty() {
-            return (&self.tokens, &self.errors);
+            return;
         }
-
-        self.cur_ln = 1;
-        self.cur_col = 0;
-        self.start_col_buf = 1;
-
-        self.reset_buffers();
-        self.inside_string = false;
 
         for ch in self.src.contents.chars() {
             self.iteration(ch);
@@ -88,7 +77,6 @@ impl<'a> Lexer<'a> {
         }
 
         self.push_new(Loc::new(self.cur_ln, self.cur_col, self.cur_col), EOF, None);
-        return (&self.tokens, &self.errors);
     }
 
     fn iteration(&mut self, ch: char) {
@@ -401,6 +389,26 @@ impl<'a> Lexer<'a> {
 
     fn current_line(&self) -> StdString {
         self.src.lines[self.cur_ln - 1].to_string()
+    }
+}
+
+static DEFAULT_SRC_CONTENTS: &StdString = &StdString::new();
+
+impl<'a> Default for Lexer<'a> {
+    fn default() -> Self {
+        Self {
+            src: MeowindScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS),
+            tokens: Vec::new(),
+            errors: MeowindErrorList::new(),
+
+            cur_ln: 1,
+            cur_col: 0,
+            start_col_buf: 1,
+            kind_buf: Undefined,
+            value_buf: LexerValueBuffer::new(),
+            punct_buf: LexerValueBuffer::new(),
+            inside_string: false,
+        }
     }
 }
 

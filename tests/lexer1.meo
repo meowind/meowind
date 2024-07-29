@@ -1,8 +1,8 @@
 use std::{console, Dict}
 
-const int constant = 5 + (4 - (3 * (2 / (1 % (0 ** -1)))));
+const constant: int32 = 5 + (4 - (3 * (2 / (1 % (0 ** -1)))));
     
-static Dict<int, string> = Dict.new([
+static dictionary: Dict<int, string> = Dict.new([
     (1, "one"),
     (2, "two"),
     (3, "three"),

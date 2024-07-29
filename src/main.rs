@@ -1,12 +1,13 @@
 #![feature(let_chains)]
-
+#[allow(unused)]
 pub mod errors;
 pub mod frontend;
 pub mod structs;
 pub mod utils;
 
-#[cfg(debug_assertions)]
 use std::time::Instant;
+
+use frontend::parsing::Parser;
 
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
@@ -30,37 +31,60 @@ fn main() {
         args.path.display()
     );
 
+    let comp_start = Instant::now();
+
     #[cfg(debug_assertions)]
     let lexer_start = Instant::now();
-    let mut lexer = Lexer::new(source);
-    let (tokens, errors) = lexer.tokenize();
+    let lexer = Lexer::tokenize(source);
+
+    lexer.errors.throw_if_there();
 
     #[cfg(debug_assertions)]
-    let micros = lexer_start.elapsed().as_micros();
+    let lexer_micros = lexer_start.elapsed().as_micros();
     #[cfg(debug_assertions)]
-    let millis = lexer_start.elapsed().as_millis();
-
-    errors.throw_if_there();
-
-    // TODO: токены в будущем нада но щяс затычка чтоб варна не было
-    #[cfg(not(debug_assertions))]
-    let _ = tokens;
+    let lexer_millis = lexer_start.elapsed().as_millis();
 
     #[cfg(debug_assertions)]
-    let tokens_info = tokens
+    let tokens_info = lexer
+        .tokens
         .iter()
         .map(|t| t.to_string())
         .collect::<Vec<_>>()
         .join("\n");
 
-    debug!(
+    log!(
         "lexer output:\n{}\nlexer finished in: {}us or {}ms",
-        tokens_info, micros, millis
+        tokens_info,
+        lexer_micros,
+        lexer_millis
     );
 
+    #[cfg(debug_assertions)]
+    let parser_start = Instant::now();
+    let parser = Parser::parse(&lexer.tokens);
+
+    parser.errors.throw_if_there();
+
+    #[cfg(debug_assertions)]
+    let parser_micros = parser_start.elapsed().as_micros();
+    #[cfg(debug_assertions)]
+    let parser_millis = parser_start.elapsed().as_millis();
+
+    log!(
+        "parser output:\n{:#?}\nparser finished in: {}us or {}ms",
+        parser.project,
+        parser_micros,
+        parser_millis
+    );
+
+    let comp_micros = comp_start.elapsed().as_micros();
+    let comp_millis = comp_start.elapsed().as_millis();
+
     println!(
-        "{GREEN}{BOLD}successfully compiled{WHITE} {}{RESET}",
-        args.path.display()
+        "{GREEN}{BOLD}successfully compiled{WHITE} {} {GREEN}in{WHITE} {}us {GREEN}or{WHITE} {}ms{RESET}",
+        args.path.display(),
+        comp_micros,
+        comp_millis
     );
 
     process::exit(0);
