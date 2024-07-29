@@ -7,7 +7,10 @@ pub mod utils;
 
 use std::time::Instant;
 
-use frontend::parsing::Parser;
+use frontend::{
+    lexing::Token,
+    parsing::{ast::project::ProjectNode, Parser},
+};
 
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
@@ -33,6 +36,25 @@ fn main() {
 
     let comp_start = Instant::now();
 
+    let tokens = run_lexer(source);
+
+    #[allow(unused)]
+    let ast = run_parser(&tokens);
+
+    let comp_micros = comp_start.elapsed().as_micros();
+    let comp_millis = comp_start.elapsed().as_millis();
+
+    println!(
+        "{GREEN}{BOLD}successfully compiled{WHITE} {} {GREEN}in{WHITE} {}us {GREEN}or{WHITE} {}ms{RESET}",
+        args.path.display(),
+        comp_micros,
+        comp_millis
+    );
+
+    process::exit(0);
+}
+
+fn run_lexer(source: MeowindScriptSource) -> Vec<Token> {
     #[cfg(debug_assertions)]
     let lexer_start = Instant::now();
     let lexer = Lexer::tokenize(source);
@@ -59,9 +81,13 @@ fn main() {
         lexer_millis
     );
 
+    return lexer.tokens;
+}
+
+fn run_parser(tokens: &Vec<Token>) -> ProjectNode {
     #[cfg(debug_assertions)]
     let parser_start = Instant::now();
-    let parser = Parser::parse(&lexer.tokens);
+    let parser = Parser::parse(tokens);
 
     parser.errors.throw_if_there();
 
@@ -77,17 +103,7 @@ fn main() {
         parser_millis
     );
 
-    let comp_micros = comp_start.elapsed().as_micros();
-    let comp_millis = comp_start.elapsed().as_millis();
-
-    println!(
-        "{GREEN}{BOLD}successfully compiled{WHITE} {} {GREEN}in{WHITE} {}us {GREEN}or{WHITE} {}ms{RESET}",
-        args.path.display(),
-        comp_micros,
-        comp_millis
-    );
-
-    process::exit(0);
+    return parser.project;
 }
 
 fn parse_arguments() -> MeowindArguments {
