@@ -1,6 +1,7 @@
 pub mod lexing;
 pub mod parsing;
 
+#[derive(Clone)]
 pub struct Loc {
     pub ln: usize,
     pub start_col: usize,

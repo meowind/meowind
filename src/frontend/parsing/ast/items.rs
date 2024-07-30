@@ -2,9 +2,9 @@ use super::{block::BlockNode, expressions::ExpressionNode, r#type::TypeNode};
 
 #[derive(Debug)]
 pub struct ItemNode {
-    name: String,
-    public: bool,
-    kind: ItemKind,
+    pub name: String,
+    pub kind: ItemKind,
+    pub public: bool,
 }
 
 #[derive(Debug)]

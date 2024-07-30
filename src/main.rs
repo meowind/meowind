@@ -15,7 +15,7 @@ use frontend::{
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
     frontend::lexing::Lexer,
-    structs::{MeowindArguments, MeowindScriptSource},
+    structs::{MeowindArguments, ScriptSource},
     utils::colors::*,
 };
 use std::{env, fs, io::ErrorKind, path::PathBuf, process};
@@ -27,7 +27,7 @@ fn main() {
     let args = parse_arguments();
 
     let source_contents = read_source_contents(&args.path);
-    let source = MeowindScriptSource::new(args.path.clone(), &source_contents);
+    let source = ScriptSource::new(args.path.clone(), &source_contents);
 
     println!(
         "{GREEN}{BOLD}compiling{WHITE} {}{RESET}",
@@ -36,10 +36,10 @@ fn main() {
 
     let comp_start = Instant::now();
 
-    let tokens = run_lexer(source);
+    let tokens = run_lexer(source.clone());
 
     #[allow(unused)]
-    let ast = run_parser(&tokens);
+    let ast = run_parser(&tokens, source.clone());
 
     let comp_micros = comp_start.elapsed().as_micros();
     let comp_millis = comp_start.elapsed().as_millis();
@@ -54,7 +54,7 @@ fn main() {
     process::exit(0);
 }
 
-fn run_lexer(source: MeowindScriptSource) -> Vec<Token> {
+fn run_lexer(source: ScriptSource) -> Vec<Token> {
     #[cfg(debug_assertions)]
     let lexer_start = Instant::now();
     let lexer = Lexer::tokenize(source);
@@ -84,10 +84,10 @@ fn run_lexer(source: MeowindScriptSource) -> Vec<Token> {
     return lexer.tokens;
 }
 
-fn run_parser(tokens: &Vec<Token>) -> ProjectNode {
+fn run_parser(tokens: &Vec<Token>, source: ScriptSource) -> ProjectNode {
     #[cfg(debug_assertions)]
     let parser_start = Instant::now();
-    let parser = Parser::parse(tokens);
+    let parser = Parser::parse(tokens, source);
 
     parser.errors.throw_if_there();
 

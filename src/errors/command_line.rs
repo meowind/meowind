@@ -3,15 +3,15 @@ use crate::utils::colors::*;
 use std::fmt;
 
 pub struct CommandLineError {
-    pub message: String,
     pub kind: CommandLineErrorKind,
+    pub msg: String,
 }
 
 impl CommandLineError {
-    pub fn new<T: ToString>(kind: CommandLineErrorKind, message: T) -> CommandLineError {
+    pub fn new<T: ToString>(kind: CommandLineErrorKind, msg: T) -> CommandLineError {
         CommandLineError {
-            message: message.to_string(),
             kind,
+            msg: msg.to_string(),
         }
     }
 }
@@ -20,7 +20,7 @@ impl MeowindError for CommandLineError {
     fn to_string(&self) -> String {
         format!(
             "{RED}{BOLD}command line error{RESET}: {}: {}",
-            self.kind, self.message
+            self.kind, self.msg
         )
     }
 }

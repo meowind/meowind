@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+pad = "0.1.6"
 unicode-segmentation = "1.11.0"
 winapi-util = "0.1.8"

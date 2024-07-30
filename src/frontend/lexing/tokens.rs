@@ -5,6 +5,7 @@ use std::{
 
 use crate::{frontend::Loc, utils::colors::*};
 
+#[derive(Clone)]
 pub struct Token {
     pub loc: Loc,
     pub kind: TokenKind,
@@ -32,6 +33,18 @@ pub enum TokenKind {
     InvalidIdentifier,
 }
 
+impl ToString for TokenKind {
+    fn to_string(&self) -> String {
+        match self {
+            TokenKind::Literal(kind) => format!("{} literal", kind.to_string()),
+            TokenKind::Keyword(kind) => format!("keyword {}", kind.to_string()),
+            TokenKind::SimplePunctuation(kind) => format!("\"{}\"", kind.to_char()),
+            TokenKind::ComplexPunctuation(kind) => format!("\"{}\"", kind.to_string()),
+            _ => format!("{:?}", self),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LiteralKind {
     Integer,
@@ -42,6 +55,12 @@ pub enum LiteralKind {
 impl LiteralKind {
     pub fn is_number(&self) -> bool {
         matches!(self, LiteralKind::Integer | LiteralKind::Float)
+    }
+}
+
+impl ToString for LiteralKind {
+    fn to_string(&self) -> String {
+        format!("{:?}", self).to_lowercase()
     }
 }
 
@@ -103,6 +122,19 @@ impl SimplePunctuationKind {
             ';' => Ok(Self::Semicolon),
             ',' => Ok(Self::Comma),
             _ => Err(()),
+        }
+    }
+
+    pub fn to_char(&self) -> char {
+        match self {
+            Self::ParenOpen => '(',
+            Self::ParenClose => ')',
+            Self::BraceOpen => '{',
+            Self::BraceClose => '}',
+            Self::BracketOpen => '[',
+            Self::BracketClose => ']',
+            Self::Semicolon => ';',
+            Self::Comma => ',',
         }
     }
 }
@@ -170,6 +202,40 @@ impl FromStr for ComplexPunctuationKind {
             ">" => Ok(Self::AngleClose),
             _ => Err(()),
         }
+    }
+}
+
+impl ToString for ComplexPunctuationKind {
+    fn to_string(&self) -> String {
+        match self {
+            Self::OperatorPlus => "+",
+            Self::OperatorMinus => "-",
+            Self::OperatorMultiply => "*",
+            Self::OperatorDivide => "/",
+            Self::OperatorModulo => "%",
+            Self::OperatorPower => "**",
+
+            Self::OperatorEqual => "==",
+            Self::OperatorNotEqual => "!=",
+            Self::OperatorLessEqual => "<=",
+            Self::OperatorGreaterEqual => ">=",
+
+            Self::Assignment => "=",
+            Self::AssignmentPlus => "+=",
+            Self::AssignmentMinus => "-=",
+            Self::AssignmentMultiply => "*=",
+            Self::AssignmentDivide => "/=",
+            Self::AssignmentModulo => "%=",
+            Self::AssignmentPower => "**=",
+
+            Self::MemberSeparator => ".",
+            Self::NamespaceSeparator => "::",
+            Self::Colon => ":",
+
+            Self::AngleOpen => "<",
+            Self::AngleClose => ">",
+        }
+        .to_string()
     }
 }
 

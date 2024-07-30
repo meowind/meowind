@@ -1,4 +1,4 @@
-// TODO: undefined errors
+// TODO: refactor errors
 
 use super::tokens::{
     ComplexPunctuationKind::{self, *},
@@ -9,17 +9,18 @@ use super::tokens::{
 };
 use crate::{
     errors::{
+        context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind},
         MeowindErrorList,
     },
     frontend::Loc,
-    structs::MeowindScriptSource,
+    structs::{ScriptSource, DEFAULT_SRC_CONTENTS},
 };
 use std::{fmt, path::PathBuf, str::FromStr, string::String as StdString};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Lexer<'a> {
-    pub src: MeowindScriptSource<'a>,
+    pub src: ScriptSource<'a>,
 
     pub tokens: Vec<Token>,
     pub errors: MeowindErrorList<SyntaxError>,
@@ -35,7 +36,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(source: MeowindScriptSource) -> Lexer {
+    pub fn new(source: ScriptSource) -> Lexer {
         Lexer {
             src: source,
 
@@ -43,7 +44,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(source: MeowindScriptSource<'a>) -> Lexer<'a> {
+    pub fn tokenize(source: ScriptSource<'a>) -> Lexer<'a> {
         let mut lexer = Lexer::new(source);
         lexer.process();
 
@@ -61,13 +62,16 @@ impl<'a> Lexer<'a> {
         self.cur_col += 1;
 
         if self.inside_string {
-            self.errors.push(SyntaxError::new_with_context(
-                SyntaxErrorKind::ExpectedCharacter,
-                "expected quote to close string literal",
-                Loc::new(self.cur_ln, self.start_col_buf, self.cur_col),
-                self.current_line(),
-                self.src.path.clone(),
-            ));
+            self.errors.push(
+                SyntaxError::default()
+                    .ctx(
+                        ErrorContextBuilder::col(self.cur_col)
+                            .from_src_and_ln(&self.src, self.cur_ln)
+                            .build(),
+                    )
+                    .kind(SyntaxErrorKind::ExpectedCharacter)
+                    .msg("expected double quote to close string literal"),
+            );
         }
 
         if !self.punct_buf.is_empty() {
@@ -92,13 +96,17 @@ impl<'a> Lexer<'a> {
             self.cur_col += 1;
 
             if self.inside_string {
-                self.errors.push(SyntaxError::new_with_context(
-                    SyntaxErrorKind::ExpectedCharacter,
-                    "regular string literals cannot be over multiple lines",
-                    Loc::new(self.cur_ln, self.start_col_buf, self.cur_col),
-                    self.current_line(),
-                    self.src.path.clone(),
-                ));
+                self.errors.push(
+                    SyntaxError::default()
+                        .ctx(
+                            ErrorContextBuilder::span(self.start_col_buf, self.cur_col)
+                                .from_src_and_ln(&self.src, self.cur_ln)
+                                .build(),
+                        )
+                        .kind(SyntaxErrorKind::ExpectedCharacter)
+                        .msg("regular string literals cannot be over multiple lines"),
+                );
+
                 self.inside_string = false;
                 self.reset_buffers();
             } else {
@@ -208,13 +216,16 @@ impl<'a> Lexer<'a> {
                 if ch.is_alphabetic() && ch != 'E' && ch != 'e' {
                     self.kind_buf = InvalidIdentifier;
 
-                    self.errors.push(SyntaxError::new_with_context(
-                        SyntaxErrorKind::UnexpectedCharacter,
-                        "identifiers cannot start with a digit",
-                        Loc::new(self.cur_ln, self.start_col_buf, self.cur_col),
-                        self.current_line(),
-                        self.src.path.clone(),
-                    ));
+                    self.errors.push(
+                        SyntaxError::default()
+                            .ctx(
+                                ErrorContextBuilder::span(self.start_col_buf, self.cur_col)
+                                    .from_src_and_ln(&self.src, self.cur_ln)
+                                    .build(),
+                            )
+                            .kind(SyntaxErrorKind::UnexpectedCharacter)
+                            .msg("identifiers cannot start with a digit"),
+                    );
                 }
             }
             _ => {}
@@ -347,23 +358,18 @@ impl<'a> Lexer<'a> {
 
     fn push(&mut self, token: Token) {
         if token.kind == Undefined {
-            let message = if let Some(value) = &token.value {
-                format!("got undefined token \"{}\"", value)
-            } else {
-                format!("got undefined token")
-            };
-
-            self.errors.push(SyntaxError::new_with_context(
-                SyntaxErrorKind::InvalidToken,
-                message,
-                Loc::new(
-                    self.cur_ln,
-                    self.cur_col - self.punct_buf.count(),
-                    self.cur_col,
-                ),
-                self.current_line(),
-                self.src.path.clone(),
-            ))
+            self.errors.push(
+                SyntaxError::default()
+                    .ctx(
+                        ErrorContextBuilder::span(
+                            self.cur_col - self.punct_buf.count(),
+                            self.cur_col,
+                        )
+                        .from_src_and_ln(&self.src, self.cur_ln)
+                        .build(),
+                    )
+                    .kind(SyntaxErrorKind::InvalidToken),
+            );
         }
 
         self.tokens.push(token);
@@ -386,18 +392,12 @@ impl<'a> Lexer<'a> {
         self.value_buf = LexerValueBuffer::new();
         self.kind_buf = Undefined;
     }
-
-    fn current_line(&self) -> StdString {
-        self.src.lines[self.cur_ln - 1].to_string()
-    }
 }
-
-static DEFAULT_SRC_CONTENTS: &StdString = &StdString::new();
 
 impl<'a> Default for Lexer<'a> {
     fn default() -> Self {
         Self {
-            src: MeowindScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS),
+            src: ScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS),
             tokens: Vec::new(),
             errors: MeowindErrorList::new(),
 
