@@ -1,4 +1,4 @@
-use super::{arg::ArgumentNode, block::BlockNode, expressions::ExpressionNode, r#type::TypeNode};
+use super::{expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode};
 
 #[derive(Debug)]
 pub struct StatementNode {
@@ -7,18 +7,16 @@ pub struct StatementNode {
 
 #[derive(Debug)]
 pub enum StatementKind {
-    VariableDeclaration {
-        name: String,
-        r#type: Option<TypeNode>,
-        value: VariableValueKind,
-        mutable: bool,
-    },
-    FunctionDeclaration {
-        name: String,
-        args: Vec<ArgumentNode>,
-        r#type: Option<TypeNode>,
-        body: BlockNode,
-    },
+    VariableDeclaration(VariableDeclarationNode),
+    FunctionDeclaration(FunctionNode),
+}
+
+#[derive(Debug)]
+pub struct VariableDeclarationNode {
+    name: String,
+    r#type: Option<TypeNode>,
+    value: VariableValueKind,
+    mutable: bool,
 }
 
 #[derive(Debug)]

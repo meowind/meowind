@@ -4,8 +4,8 @@ use super::items::ItemNode;
 
 #[derive(Debug)]
 pub struct NamespaceNode {
-    kind: NamespaceKind,
-    items: Vec<ItemNode>,
+    pub kind: NamespaceKind,
+    pub items: Vec<ItemNode>,
 }
 
 impl NamespaceNode {

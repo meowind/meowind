@@ -2,7 +2,7 @@ use crate::frontend::lexing::{ComplexPunctuationKind, LiteralKind};
 
 #[derive(Debug)]
 pub struct ExpressionNode {
-    kind: ExpressionKind,
+    pub kind: ExpressionKind,
 }
 
 #[derive(Debug)]

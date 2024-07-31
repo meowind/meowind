@@ -1,0 +1,3 @@
+pub const a: int = 50;
+pub const b: float = 50.5 + 50.6;
+const c: int = (50 + 50) ** 2;

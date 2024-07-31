@@ -72,21 +72,36 @@ impl MeowindError for SyntaxError {
 
 #[derive(Clone)]
 pub enum SyntaxErrorKind {
-    ExpectedCharacter,
-    UnexpectedCharacter,
-    ExpectedToken,
-    UnexpectedToken,
-    InvalidToken,
+    Expected(SyntaxErrorSource),
+    Unexpected(SyntaxErrorSource),
+    Invalid(SyntaxErrorSource),
+}
+
+#[derive(Debug, Clone)]
+pub enum SyntaxErrorSource {
+    Character,
+    Token,
+    Expression,
+}
+
+impl ToString for SyntaxErrorSource {
+    fn to_string(&self) -> String {
+        return format!("{:?}", self);
+    }
 }
 
 impl fmt::Display for SyntaxErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let text = match self {
-            SyntaxErrorKind::ExpectedCharacter => "expected character",
-            SyntaxErrorKind::UnexpectedCharacter => "unexpected character",
-            SyntaxErrorKind::ExpectedToken => "expected token",
-            SyntaxErrorKind::UnexpectedToken => "unexpected token",
-            SyntaxErrorKind::InvalidToken => "invalid token",
+            SyntaxErrorKind::Expected(source) => {
+                format!("expected {}", source.to_string().to_lowercase())
+            }
+            SyntaxErrorKind::Unexpected(source) => {
+                format!("unexpected {}", source.to_string().to_lowercase())
+            }
+            SyntaxErrorKind::Invalid(source) => {
+                format!("invalid {}", source.to_string().to_lowercase())
+            }
         };
 
         write!(f, "{text}")

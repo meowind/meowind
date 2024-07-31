@@ -5,7 +5,7 @@ use std::{
 
 use crate::{frontend::Loc, utils::colors::*};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub loc: Loc,
     pub kind: TokenKind,

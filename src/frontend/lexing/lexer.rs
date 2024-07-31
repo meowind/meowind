@@ -10,7 +10,7 @@ use super::tokens::{
 use crate::{
     errors::{
         context::ErrorContextBuilder,
-        syntax::{SyntaxError, SyntaxErrorKind},
+        syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
         MeowindErrorList,
     },
     frontend::Loc,
@@ -69,7 +69,7 @@ impl<'a> Lexer<'a> {
                             .from_src_and_ln(&self.src, self.cur_ln)
                             .build(),
                     )
-                    .kind(SyntaxErrorKind::ExpectedCharacter)
+                    .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Character))
                     .msg("expected double quote to close string literal"),
             );
         }
@@ -99,11 +99,11 @@ impl<'a> Lexer<'a> {
                 self.errors.push(
                     SyntaxError::default()
                         .ctx(
-                            ErrorContextBuilder::span(self.start_col_buf, self.cur_col)
+                            ErrorContextBuilder::col(self.cur_col)
                                 .from_src_and_ln(&self.src, self.cur_ln)
                                 .build(),
                         )
-                        .kind(SyntaxErrorKind::ExpectedCharacter)
+                        .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Character))
                         .msg("regular string literals cannot be over multiple lines"),
                 );
 
@@ -184,7 +184,7 @@ impl<'a> Lexer<'a> {
         }
 
         if ch.is_ascii_punctuation() && ch != '_' {
-            if self.punct_buf.is_empty() {
+            if self.punct_buf.is_empty() && self.kind_buf != Literal(Integer) {
                 self.push_keyword_or_ident(Loc::new(self.cur_ln, self.start_col_buf, self.cur_col));
                 self.start_col_buf = self.cur_col;
             }
@@ -223,7 +223,7 @@ impl<'a> Lexer<'a> {
                                     .from_src_and_ln(&self.src, self.cur_ln)
                                     .build(),
                             )
-                            .kind(SyntaxErrorKind::UnexpectedCharacter)
+                            .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Character))
                             .msg("identifiers cannot start with a digit"),
                     );
                 }
@@ -268,6 +268,11 @@ impl<'a> Lexer<'a> {
             self.kind_buf = Literal(Float);
             self.value_buf.push('.');
         } else {
+            if self.kind_buf == Literal(Integer) {
+                self.push_keyword_or_ident(Loc::new(self.cur_ln, self.start_col_buf, self.cur_col));
+                self.start_col_buf = self.cur_col;
+            }
+
             self.push_new(
                 Loc::new(self.cur_ln, self.cur_col - 1, self.cur_col),
                 ComplexPunctuation(MemberSeparator),
@@ -368,7 +373,7 @@ impl<'a> Lexer<'a> {
                         .from_src_and_ln(&self.src, self.cur_ln)
                         .build(),
                     )
-                    .kind(SyntaxErrorKind::InvalidToken),
+                    .kind(SyntaxErrorKind::Invalid(SyntaxErrorSource::Token)),
             );
         }
 
