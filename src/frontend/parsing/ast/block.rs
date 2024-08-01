@@ -2,7 +2,7 @@ use super::{expressions::ExpressionNode, statements::StatementNode};
 
 #[derive(Debug)]
 pub struct BlockNode {
-    elements: Vec<BlockElementKind>,
+    pub elements: Vec<BlockElementKind>,
 }
 
 #[derive(Debug)]

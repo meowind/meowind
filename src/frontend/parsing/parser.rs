@@ -18,7 +18,9 @@ use crate::{
 };
 
 use super::ast::{
+    block::BlockNode,
     expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode},
+    functions::{ArgumentNode, FunctionNode},
     items::{ConstantNode, ItemKind, ItemNode, StaticNode},
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
@@ -85,6 +87,7 @@ impl<'a> Parser<'a> {
         let kind = match token.kind {
             Keyword(Const) => ItemKind::Constant(self.parse_const()?),
             Keyword(Static) => ItemKind::Static(self.parse_static()?),
+            Keyword(Func) => ItemKind::Function(self.parse_function()?),
             _ => {
                 return Err(SyntaxError::default()
                     .ctx(
@@ -156,6 +159,112 @@ impl<'a> Parser<'a> {
             value: expression,
             mutable,
         });
+    }
+
+    fn parse_function(&mut self) -> Result<FunctionNode, SyntaxError> {
+        self.expect(Keyword(Func))?;
+
+        self.advance();
+        let name_token = self.expect(Identifier)?;
+
+        self.advance();
+        let args = self.parse_function_arguments()?;
+
+        self.advance();
+        let mut r#type = None;
+        let mut return_var = None;
+
+        if self.current().kind == ComplexPunctuation(ReturnSeparator) {
+            self.advance();
+            r#type = Some(self.parse_type()?);
+
+            self.advance();
+            if self.current().kind == ComplexPunctuation(Colon) {
+                return_var = Some(r#type.unwrap().raw);
+
+                self.advance();
+                r#type = Some(self.parse_type()?);
+
+                self.advance();
+            }
+        }
+
+        return Ok(FunctionNode {
+            name: name_token.value.unwrap(),
+            args,
+            r#type,
+            return_var,
+            body: BlockNode {
+                elements: Vec::new(),
+            },
+        });
+    }
+
+    fn parse_function_arguments(&mut self) -> Result<Vec<ArgumentNode>, SyntaxError> {
+        self.expect(SimplePunctuation(ParenOpen))?;
+        let mut args = Vec::new();
+
+        loop {
+            self.advance();
+            let token = self.current();
+
+            if token.kind == EOF {
+                return Err(SyntaxError::default()
+                    .ctx(
+                        ErrorContextBuilder::col(token.loc.start_col)
+                            .from_src_and_ln(&self.src, token.loc.ln)
+                            .build(),
+                    )
+                    .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Character))
+                    .msg("expected \")\""));
+            }
+
+            if self.current().kind == SimplePunctuation(ParenClose) {
+                break;
+            }
+
+            let name_token = self.expect(Identifier)?;
+
+            self.advance();
+            let mut r#type = None;
+
+            if self.current().kind == ComplexPunctuation(Colon) {
+                self.advance();
+                r#type = Some(self.parse_type()?);
+
+                self.advance();
+            }
+
+            let mut value = None;
+
+            if self.current().kind == ComplexPunctuation(Assignment) {
+                self.advance();
+                value = Some(self.parse_expression()?);
+            }
+
+            if r#type == None && value == None {
+                return Err(SyntaxError::default()
+                    .ctx(
+                        ErrorContextBuilder::span(name_token.loc.start_col, name_token.loc.end_col)
+                            .from_src_and_ln(&self.src, name_token.loc.ln)
+                            .build(),
+                    )
+                    .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
+                    .msg("argument requires type or default value"));
+            }
+
+            args.push(ArgumentNode {
+                name: name_token.value.unwrap(),
+                r#type,
+                default: value,
+            });
+
+            if self.current().kind != SimplePunctuation(Comma) {
+                break;
+            }
+        }
+
+        return Ok(args);
     }
 
     fn parse_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {

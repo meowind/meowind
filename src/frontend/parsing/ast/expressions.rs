@@ -2,12 +2,12 @@ use std::isize;
 
 use crate::frontend::lexing::{ComplexPunctuationKind, LiteralKind};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionNode {
     pub kind: ExpressionKind,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
     Literal {
         kind: LiteralKind,

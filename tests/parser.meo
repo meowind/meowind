@@ -1,7 +1,8 @@
-static a = 5;
+func a();
+func b() -> int32;
+func c() -> output: int32;
 
-static b: int32 = 5;
-
-static mut c = 5;
-
-static mut d: int32 = 5;
+func d(a: int32);
+func e(a: string, b: int32) -> int32;
+func f(a: bool, b: string = "ka fif") -> output: int32;
+func g(a: bool, b = "pa tur") -> output: int32;

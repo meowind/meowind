@@ -170,6 +170,7 @@ pub enum ComplexPunctuationKind {
     AssignmentModulo,
     AssignmentPower,
 
+    ReturnSeparator,
     MemberSeparator,
     NamespaceSeparator,
     Colon,
@@ -207,6 +208,7 @@ impl FromStr for ComplexPunctuationKind {
             "%=" => Ok(Self::AssignmentModulo),
             "**=" => Ok(Self::AssignmentPower),
 
+            "->" => Ok(Self::ReturnSeparator),
             "." => Ok(Self::MemberSeparator),
             "::" => Ok(Self::NamespaceSeparator),
             ":" => Ok(Self::Colon),
@@ -245,6 +247,7 @@ impl ToString for ComplexPunctuationKind {
             Self::AssignmentModulo => "%=",
             Self::AssignmentPower => "**=",
 
+            Self::ReturnSeparator => "->",
             Self::MemberSeparator => ".",
             Self::NamespaceSeparator => "::",
             Self::Colon => ":",
