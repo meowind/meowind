@@ -22,6 +22,7 @@ pub enum ExpressionKind {
     },
 
     Unary {
+        kind: UnaryExpressionKind,
         op: ComplexPunctuationKind,
         right: Box<ExpressionNode>,
     },
@@ -38,6 +39,20 @@ pub enum ExpressionKind {
     Identifier {
         name: String,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryExpressionKind {
+    ArithmeticNegation,
+}
+
+impl UnaryExpressionKind {
+    pub fn from_punct(opr: &ComplexPunctuationKind) -> Result<UnaryExpressionKind, ()> {
+        match opr {
+            ComplexPunctuationKind::OperatorMinus => Ok(UnaryExpressionKind::ArithmeticNegation),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

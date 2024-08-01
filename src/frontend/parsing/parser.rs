@@ -4,13 +4,16 @@ use crate::{
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
         MeowindErrorList,
     },
-    frontend::lexing::{
-        ComplexPunctuationKind::{self, *},
-        KeywordKind::*,
-        LiteralKind::{self, *},
-        SimplePunctuationKind::*,
-        Token,
-        TokenKind::{self, *},
+    frontend::{
+        lexing::{
+            ComplexPunctuationKind::{self, *},
+            KeywordKind::*,
+            LiteralKind::{self, *},
+            SimplePunctuationKind::*,
+            Token,
+            TokenKind::{self, *},
+        },
+        parsing::ast::expressions::UnaryExpressionKind,
     },
     structs::ScriptSource,
 };
@@ -209,6 +212,29 @@ impl<'a> Parser<'a> {
                     value: token.value.unwrap(),
                 },
             }),
+            ComplexPunctuation(punct_kind) => {
+                let Ok(un_kind) = UnaryExpressionKind::from_punct(&punct_kind) else {
+                    return Err(SyntaxError::default()
+                        .ctx(
+                            ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
+                                .from_src_and_ln(&self.src, token.loc.ln)
+                                .build(),
+                        )
+                        .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
+                        .msg("specified token is not a unary operator"));
+                };
+
+                self.advance();
+                let right = self.parse_primary_expression()?;
+
+                Ok(ExpressionNode {
+                    kind: ExpressionKind::Unary {
+                        kind: un_kind,
+                        op: punct_kind,
+                        right: Box::new(right),
+                    },
+                })
+            }
             SimplePunctuation(ParenOpen) => {
                 self.advance();
                 let expr = self.parse_expression()?;
