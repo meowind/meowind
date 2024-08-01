@@ -50,6 +50,7 @@ pub enum LiteralKind {
     Integer,
     Float,
     String,
+    Boolean,
 }
 
 impl LiteralKind {
@@ -73,6 +74,8 @@ pub enum KeywordKind {
     Const,
     Static,
     Use,
+    True,
+    False,
 }
 
 impl FromStr for KeywordKind {
@@ -87,6 +90,8 @@ impl FromStr for KeywordKind {
             "const" => Ok(Self::Const),
             "static" => Ok(Self::Static),
             "use" => Ok(Self::Use),
+            "true" => Ok(Self::True),
+            "false" => Ok(Self::False),
             _ => Err(()),
         }
     }
@@ -153,6 +158,10 @@ pub enum ComplexPunctuationKind {
     OperatorLessEqual,
     OperatorGreaterEqual,
 
+    OperatorAnd,
+    OperatorOr,
+    OperatorNot,
+
     Assignment,
     AssignmentPlus,
     AssignmentMinus,
@@ -185,6 +194,10 @@ impl FromStr for ComplexPunctuationKind {
             "!=" => Ok(Self::OperatorNotEqual),
             "<=" => Ok(Self::OperatorLessEqual),
             ">=" => Ok(Self::OperatorGreaterEqual),
+
+            "&&" => Ok(Self::OperatorAnd),
+            "||" => Ok(Self::OperatorOr),
+            "!" => Ok(Self::OperatorNot),
 
             "=" => Ok(Self::Assignment),
             "+=" => Ok(Self::AssignmentPlus),
@@ -219,6 +232,10 @@ impl ToString for ComplexPunctuationKind {
             Self::OperatorNotEqual => "!=",
             Self::OperatorLessEqual => "<=",
             Self::OperatorGreaterEqual => ">=",
+
+            Self::OperatorAnd => "&&",
+            Self::OperatorOr => "||",
+            Self::OperatorNot => "!",
 
             Self::Assignment => "=",
             Self::AssignmentPlus => "+=",

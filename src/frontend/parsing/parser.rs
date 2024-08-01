@@ -6,9 +6,8 @@ use crate::{
     },
     frontend::{
         lexing::{
-            ComplexPunctuationKind::{self, *},
+            ComplexPunctuationKind::*,
             KeywordKind::*,
-            LiteralKind::{self, *},
             SimplePunctuationKind::*,
             Token,
             TokenKind::{self, *},
@@ -136,7 +135,7 @@ impl<'a> Parser<'a> {
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Expression)));
         }
 
-        self.parse_binary_expression(BinaryExpressionKind::Additive)
+        self.parse_binary_expression(BinaryExpressionKind::lowest())
     }
 
     fn parse_binary_expression(
@@ -212,6 +211,7 @@ impl<'a> Parser<'a> {
                     value: token.value.unwrap(),
                 },
             }),
+
             ComplexPunctuation(punct_kind) => {
                 let Ok(un_kind) = UnaryExpressionKind::from_punct(&punct_kind) else {
                     return Err(SyntaxError::default()

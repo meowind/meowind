@@ -235,18 +235,16 @@ impl<'a> Lexer<'a> {
     }
 
     fn push_keyword_or_ident(&mut self, loc: Loc) {
+        let loc = Loc::new(loc.ln, loc.start_col, loc.end_col);
+
         if let Ok(kind) = KeywordKind::from_str(&self.value_buf.value) {
-            self.push_new(
-                Loc::new(loc.ln, loc.start_col, loc.end_col),
-                Keyword(kind),
-                None,
-            );
+            if matches!(kind, KeywordKind::True | KeywordKind::False) {
+                self.push_new(loc, Literal(Boolean), Some(self.value_buf.value.clone()))
+            } else {
+                self.push_new(loc, Keyword(kind), None);
+            }
         } else {
-            self.push_new_not_empty(
-                Loc::new(loc.ln, loc.start_col, loc.end_col),
-                self.kind_buf.clone(),
-                self.value_buf.value.clone(),
-            );
+            self.push_new_not_empty(loc, self.kind_buf.clone(), self.value_buf.value.clone());
         }
         self.reset_buffers();
     }
