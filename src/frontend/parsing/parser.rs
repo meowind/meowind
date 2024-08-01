@@ -19,7 +19,7 @@ use crate::{
 
 use super::ast::{
     expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode},
-    items::{ConstantNode, ItemKind, ItemNode},
+    items::{ConstantNode, ItemKind, ItemNode, StaticNode},
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
     r#type::TypeNode,
@@ -84,6 +84,7 @@ impl<'a> Parser<'a> {
 
         let kind = match token.kind {
             Keyword(Const) => ItemKind::Constant(self.parse_const()?),
+            Keyword(Static) => ItemKind::Static(self.parse_static()?),
             _ => {
                 return Err(SyntaxError::default()
                     .ctx(
@@ -120,6 +121,40 @@ impl<'a> Parser<'a> {
             name: name_token.value.unwrap(),
             r#type,
             value: expression,
+        });
+    }
+
+    fn parse_static(&mut self) -> Result<StaticNode, SyntaxError> {
+        self.expect(Keyword(Static))?;
+
+        self.advance();
+        let mutable = self.current().kind == Keyword(Mut);
+        if mutable {
+            self.advance();
+        }
+
+        let name_token = self.expect(Identifier)?;
+
+        self.advance();
+        let mut r#type = None;
+
+        if self.current().kind == ComplexPunctuation(Colon) {
+            self.advance();
+            r#type = Some(self.parse_type()?);
+
+            self.advance();
+        }
+
+        self.expect(ComplexPunctuation(Assignment))?;
+
+        self.advance();
+        let expression = self.parse_expression()?;
+
+        return Ok(StaticNode {
+            name: name_token.value.unwrap(),
+            r#type,
+            value: expression,
+            mutable,
         });
     }
 

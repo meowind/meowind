@@ -23,6 +23,7 @@ pub struct ConstantNode {
 #[derive(Debug)]
 pub struct StaticNode {
     pub name: String,
-    pub r#type: TypeNode,
+    pub r#type: Option<TypeNode>,
     pub value: ExpressionNode,
+    pub mutable: bool,
 }

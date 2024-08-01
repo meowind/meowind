@@ -1,1 +1,7 @@
-const a: bool = !true == false;
+static a = 5;
+
+static b: int32 = 5;
+
+static mut c = 5;
+
+static mut d: int32 = 5;
