@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::ast::{
-    expressions::{ExpressionKind, ExpressionNode},
+    expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode},
     items::{ConstantNode, ItemKind, ItemNode},
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
@@ -60,13 +60,13 @@ impl<'a> Parser<'a> {
                 return;
             };
 
-            self.project.root.items.push(item);
-
-            self.advance();
-            if let Err(err) = self.expect(SimplePunctuation(Semicolon)) {
-                self.errors.push(err);
+            let result = self.expect(SimplePunctuation(Semicolon));
+            if let Ok(_) = result {
+                self.project.root.items.push(item);
+                self.advance();
+            } else {
+                self.errors.push(result.unwrap_err());
             }
-            self.advance();
         }
     }
 
@@ -106,7 +106,7 @@ impl<'a> Parser<'a> {
         self.expect(ComplexPunctuation(Colon))?;
 
         self.advance();
-        let type_token = self.expect(Identifier)?;
+        let r#type = self.parse_type()?;
 
         self.advance();
         self.expect(ComplexPunctuation(Assignment))?;
@@ -116,9 +116,7 @@ impl<'a> Parser<'a> {
 
         return Ok(ConstantNode {
             name: name_token.value.unwrap(),
-            r#type: TypeNode {
-                raw: type_token.value.unwrap(),
-            },
+            r#type,
             value: expression,
         });
     }
@@ -135,12 +133,106 @@ impl<'a> Parser<'a> {
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Expression)));
         }
 
-        // TODO
-        Ok(ExpressionNode {
-            kind: ExpressionKind::Literal {
-                kind: LiteralKind::Float,
-                value: "50".to_string(),
-            },
+        self.parse_binary_expression(BinaryExpressionKind::Additive)
+    }
+
+    fn parse_binary_expression(
+        &mut self,
+        bin_kind: BinaryExpressionKind,
+    ) -> Result<ExpressionNode, SyntaxError> {
+        let mut expr = self.parse_binary_expression_operand(&bin_kind)?;
+
+        while let ComplexPunctuation(punct_kind) = self.current().kind {
+            let token = self.current();
+
+            let Ok(punct_bin_kind) = BinaryExpressionKind::from_punct(&punct_kind) else {
+                return Err(SyntaxError::default()
+                    .ctx(
+                        ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
+                            .from_src_and_ln(&self.src, token.loc.ln)
+                            .build(),
+                    )
+                    .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
+                    .msg("specified token is not a binary operator"));
+            };
+
+            if punct_bin_kind != bin_kind {
+                break;
+            }
+
+            self.advance();
+
+            let right = self.parse_binary_expression_operand(&bin_kind)?;
+            expr = ExpressionNode {
+                kind: ExpressionKind::Binary {
+                    kind: punct_bin_kind.clone(),
+                    left: Box::new(expr),
+                    op: punct_kind,
+                    right: Box::new(right),
+                },
+            }
+        }
+
+        return Ok(expr);
+    }
+
+    fn parse_binary_expression_operand(
+        &mut self,
+        bin_kind: &BinaryExpressionKind,
+    ) -> Result<ExpressionNode, SyntaxError> {
+        let expr = if let Ok(more_precedence) =
+            BinaryExpressionKind::from_precedence(bin_kind.precedence() + 1)
+        {
+            self.parse_binary_expression(more_precedence)?
+        } else {
+            let prim_expr = self.parse_primary_expression()?;
+            self.advance();
+
+            prim_expr
+        };
+
+        return Ok(expr);
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
+        let token = self.current();
+
+        match token.kind {
+            Identifier => Ok(ExpressionNode {
+                kind: ExpressionKind::Identifier {
+                    name: token.value.unwrap(),
+                },
+            }),
+            Literal(lit) => Ok(ExpressionNode {
+                kind: ExpressionKind::Literal {
+                    kind: lit,
+                    value: token.value.unwrap(),
+                },
+            }),
+            SimplePunctuation(ParenOpen) => {
+                self.advance();
+                let expr = self.parse_expression()?;
+                self.expect(SimplePunctuation(ParenClose))?;
+
+                Ok(expr)
+            }
+
+            _ => Err(SyntaxError::default()
+                .ctx(
+                    ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
+                        .from_src_and_ln(&self.src, token.loc.ln)
+                        .build(),
+                )
+                .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
+                .msg("specified token cannot be used for expressions")),
+        }
+    }
+
+    fn parse_type(&mut self) -> Result<TypeNode, SyntaxError> {
+        let type_token = self.expect(Identifier)?;
+
+        Ok(TypeNode {
+            raw: type_token.value.unwrap(),
         })
     }
 

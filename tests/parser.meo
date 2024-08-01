@@ -1,3 +1,7 @@
-pub const a: int = 50;
-pub const b: float = 50.5 + 50.6;
-const c: int = (50 + 50) ** 2;
+pub const thing_a: int32 = 10;
+
+const thing_b: float32 = "na sv ay" + 10;
+
+pub const thing_c: int32 = 10 + 9 * 8 ** 7;
+
+const thing_d: string = (10 + a) / 2;

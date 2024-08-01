@@ -21,6 +21,8 @@ use crate::{
 use std::{env, fs, io::ErrorKind, path::PathBuf, process};
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
+
     #[cfg(windows)]
     init_windows_colors();
 
