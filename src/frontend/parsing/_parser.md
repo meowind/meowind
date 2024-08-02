@@ -1,8 +1,9 @@
 # currently supported features:
 ## expressions
 ### binary
-`<expr> <op> <expr>`
-*arithmetic operators*
+structure: `<expr> <op> <expr>`
+
+#### arithmetic operators
 | Name          | Token         |
 | ------------- | ------------- |
 | `add` | `+` |
@@ -12,7 +13,7 @@
 | `modulo` | `%` |
 | `power` | `**` |
 
-*relational operators*
+#### relational operators
 | Name          | Token         |
 | ------------- | ------------- |
 | `equal` | `==` |
@@ -22,22 +23,23 @@
 | `greater or equal` | `>=` |
 | `less or equal` | `<=` |
 
-*logical operators*
+#### logical operators
 | Name          | Token         |
 | ------------- | ------------- |
 | `and` | `&&` |
 | `or` | `\|\|` |
 
 ### unary
-`<op> <expr>`
-*operators*
+structure: `<op> <expr>`
+
+#### operators
 | Name          | Token         |
 | ------------- | ------------- |
 | `arithmetic negation` | `-` |
 | `logical negation` | `!` |
 
 ### literal
-*supported literals*
+#### supported literals
 | Literal          | Example         |
 | ------------- | ------------- |
 | `integer` | `10` |
@@ -49,11 +51,11 @@
 example: `my_var`
 
 ### call
-structure: `<expr>([<expr>, ...])`
+structure: `<expr>([<expr>, ...])`\
 
 ### resolution
 example: `namespace_a::namespace_b::some_item.some_member`
-*resolution kinds*
+#### resolution kinds
 | Name          | Token         | Example |
 | ------------- | ------------- | ------------- |
 | `namespace` | `::` | `namespace_a::namespace_b` |
@@ -61,14 +63,14 @@ example: `namespace_a::namespace_b::some_item.some_member`
 
 ## items
 ### constants
-structure: `[pub] const <name>: <type> = <expr>;`
+structure: `[pub] const <name>: <type> = <expr>;`\
 examples:
 ```
 const a: int32 = 50;
 pub const b: string = "hello world!";
 ```
 ### static variables
-structure: `[pub] static [mut] <name>[: <type>] = <expr>;`
+structure: `[pub] static [mut] <name>[: <type>] = <expr>;`\
 examples:
 ```
 static a = 60;
@@ -77,7 +79,7 @@ pub static mut c = "hello " + "world!";
 pub static mut d: bool = true;
 ```
 ### functions
-structure: `[pub] func <name>([<name>[: <type>] [= <expr>], ...]) [-> <type> | <name>: <type>] <block>`
+structure: `[pub] func <name>([<name>[: <type>] [= <expr>], ...]) [-> <type> | <name>: <type>] <block>`\
 examples:
 ```
 func a() { }
@@ -93,7 +95,7 @@ structure: `<stmt> => <expr|stmt|block>;`
 structure: `<stmt> { [<expr|stmt|block>; ...] }`
 ## statements
 ### variable declaration
-structure: `let [mut] <name>[: <type>] [= <expr>];`
+structure: `let [mut] <name>[: <type>] [= <expr>];`\
 examples:
 ```
 func main() {
