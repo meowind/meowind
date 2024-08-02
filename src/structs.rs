@@ -14,7 +14,7 @@ impl<'a> ScriptSource<'a> {
         ScriptSource {
             path,
             chars: contents.chars().collect(),
-            lines: contents.lines().collect(),
+            lines: contents.split("\n").collect(),
             contents,
         }
     }

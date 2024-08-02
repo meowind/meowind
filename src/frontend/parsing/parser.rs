@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::{
     errors::{
         context::ErrorContextBuilder,
@@ -18,13 +20,14 @@ use crate::{
 };
 
 use super::ast::{
-    block::BlockNode,
-    expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode},
+    block::{BlockElementKind, BlockElementNode, BlockKind, BlockNode},
+    expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode, ResolutionExpressionKind},
     functions::{ArgumentNode, FunctionNode},
     items::{ConstantNode, ItemKind, ItemNode, StaticNode},
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
     r#type::TypeNode,
+    statements::{StatementKind, StatementNode, VariableDeclarationNode},
 };
 
 pub struct Parser<'a> {
@@ -64,26 +67,19 @@ impl<'a> Parser<'a> {
                 return;
             };
 
-            let result = self.expect(SimplePunctuation(Semicolon));
-            if let Ok(_) = result {
-                self.project.root.items.push(item);
-                self.advance();
-            } else {
-                self.errors.push(result.unwrap_err());
-            }
+            self.project.root.items.push(item);
+            self.advance();
         }
     }
 
     fn parse_item(&mut self) -> Result<ItemNode, SyntaxError> {
-        let token = self.current();
-        let public = token.kind == Keyword(Pub);
-
-        if public {
+        let mut public = false;
+        if self.current().kind == Keyword(Pub) {
+            public = true;
             self.advance();
         }
 
         let token = self.current();
-
         let kind = match token.kind {
             Keyword(Const) => ItemKind::Constant(self.parse_const()?),
             Keyword(Static) => ItemKind::Static(self.parse_static()?),
@@ -120,6 +116,8 @@ impl<'a> Parser<'a> {
         self.advance();
         let expression = self.parse_expression()?;
 
+        self.expect(SimplePunctuation(Semicolon))?;
+
         return Ok(ConstantNode {
             name: name_token.value.unwrap(),
             r#type,
@@ -129,10 +127,11 @@ impl<'a> Parser<'a> {
 
     fn parse_static(&mut self) -> Result<StaticNode, SyntaxError> {
         self.expect(Keyword(Static))?;
-
         self.advance();
-        let mutable = self.current().kind == Keyword(Mut);
-        if mutable {
+
+        let mut mutable = false;
+        if self.current().kind == Keyword(Mut) {
+            mutable = true;
             self.advance();
         }
 
@@ -152,6 +151,8 @@ impl<'a> Parser<'a> {
 
         self.advance();
         let expression = self.parse_expression()?;
+
+        self.expect(SimplePunctuation(Semicolon))?;
 
         return Ok(StaticNode {
             name: name_token.value.unwrap(),
@@ -189,14 +190,171 @@ impl<'a> Parser<'a> {
             }
         }
 
+        let body = self.parse_block()?;
+        // TODO self.advance();
+
         return Ok(FunctionNode {
             name: name_token.value.unwrap(),
             args,
             r#type,
             return_var,
-            body: BlockNode {
-                elements: Vec::new(),
-            },
+            body,
+        });
+    }
+
+    fn parse_block(&mut self) -> Result<BlockNode, SyntaxError> {
+        let token = self.expect_multiple(vec![
+            SimplePunctuation(BraceOpen),
+            ComplexPunctuation(InlineBlock),
+        ])?;
+
+        let block = match token.kind {
+            SimplePunctuation(BraceOpen) => self.parse_multiline_block()?,
+            ComplexPunctuation(InlineBlock) => self.parse_inline_block()?,
+            _ => unreachable!(),
+        };
+
+        return Ok(block);
+    }
+
+    fn parse_multiline_block(&mut self) -> Result<BlockNode, SyntaxError> {
+        self.expect(SimplePunctuation(BraceOpen))?;
+        let mut els: Vec<BlockElementNode> = Vec::new();
+
+        loop {
+            self.advance();
+            let token = self.current();
+
+            if matches!(token.kind, SimplePunctuation(BraceClose) | EOF) {
+                break;
+            }
+
+            let el = self.parse_block_element()?;
+            els.push(el);
+        }
+
+        self.expect(SimplePunctuation(BraceClose))?;
+
+        Ok(BlockNode {
+            kind: BlockKind::Multiline(els),
+        })
+    }
+
+    fn parse_inline_block(&mut self) -> Result<BlockNode, SyntaxError> {
+        self.expect(ComplexPunctuation(InlineBlock))?;
+
+        self.advance();
+        let el = self.parse_block_element()?;
+
+        Ok(BlockNode {
+            kind: BlockKind::Inline(Box::new(el)),
+        })
+    }
+
+    fn parse_block_element(&mut self) -> Result<BlockElementNode, SyntaxError> {
+        let token = self.current();
+
+        if token.kind == SimplePunctuation(Semicolon) {
+            return Ok(BlockElementNode {
+                kind: BlockElementKind::Empty,
+            });
+        }
+
+        if token.kind == SimplePunctuation(BraceOpen) {
+            let block = self.parse_multiline_block()?;
+
+            return Ok(BlockElementNode {
+                kind: BlockElementKind::Block(block),
+            });
+        }
+
+        let stmt = self.parse_statement()?;
+
+        Ok(BlockElementNode {
+            kind: BlockElementKind::Statement(stmt),
+        })
+    }
+
+    fn parse_statement(&mut self) -> Result<StatementNode, SyntaxError> {
+        let stmt = match self.current().kind {
+            Keyword(Var) => {
+                let var = self.parse_variable_declaration()?;
+
+                self.expect(SimplePunctuation(Semicolon))?;
+
+                StatementKind::VariableDeclaration(var)
+            }
+            Keyword(Func) => {
+                let func = self.parse_function()?;
+                StatementKind::FunctionDeclaration(func)
+            }
+            Keyword(Return) => {
+                self.advance();
+                let expr = self.parse_expression()?;
+
+                self.expect(SimplePunctuation(Semicolon))?;
+
+                StatementKind::Return(expr)
+            }
+            _ => {
+                let expr = self.parse_expression()?;
+
+                self.expect(SimplePunctuation(Semicolon))?;
+
+                StatementKind::Expression(expr)
+            }
+        };
+
+        return Ok(StatementNode { kind: stmt });
+    }
+
+    fn parse_variable_declaration(&mut self) -> Result<VariableDeclarationNode, SyntaxError> {
+        self.expect(Keyword(Var))?;
+        self.advance();
+
+        let mut mutable = false;
+        if self.current().kind == Keyword(Mut) {
+            mutable = true;
+            self.advance();
+        }
+
+        let name_token = self.expect(Identifier)?;
+
+        self.advance();
+        let mut r#type = None;
+
+        if self.current().kind == ComplexPunctuation(Colon) {
+            self.advance();
+            r#type = Some(self.parse_type()?);
+
+            self.advance();
+        }
+
+        let mut value = None;
+
+        if self.current().kind == ComplexPunctuation(Assignment) {
+            self.advance();
+            value = Some(self.parse_expression()?);
+        }
+
+        if r#type == None && value == None {
+            return Err(SyntaxError::default()
+                .ctx(
+                    ErrorContextBuilder::span(name_token.loc.start_col, name_token.loc.end_col)
+                        .from_src_and_ln(&self.src, name_token.loc.ln)
+                        .build(),
+                )
+                .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
+                .msg("variable requires type or default value"));
+        }
+
+        self.expect(SimplePunctuation(Semicolon))?;
+
+        return Ok(VariableDeclarationNode {
+            name: name_token.value.unwrap(),
+            r#type,
+            value,
+            mutable,
         });
     }
 
@@ -206,20 +364,7 @@ impl<'a> Parser<'a> {
 
         loop {
             self.advance();
-            let token = self.current();
-
-            if token.kind == EOF {
-                return Err(SyntaxError::default()
-                    .ctx(
-                        ErrorContextBuilder::col(token.loc.start_col)
-                            .from_src_and_ln(&self.src, token.loc.ln)
-                            .build(),
-                    )
-                    .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Character))
-                    .msg("expected \")\""));
-            }
-
-            if self.current().kind == SimplePunctuation(ParenClose) {
+            if matches!(self.current().kind, SimplePunctuation(ParenClose) | EOF) {
                 break;
             }
 
@@ -264,6 +409,7 @@ impl<'a> Parser<'a> {
             }
         }
 
+        self.expect(SimplePunctuation(ParenClose))?;
         return Ok(args);
     }
 
@@ -331,13 +477,102 @@ impl<'a> Parser<'a> {
         {
             self.parse_binary_expression(more_precedence)?
         } else {
-            let prim_expr = self.parse_primary_expression()?;
-            self.advance();
+            self.parse_call_or_resolution_expression()?
 
-            prim_expr
+            /* before
+                self.advance();
+                prim_expr
+            */
         };
 
         return Ok(expr);
+    }
+
+    fn parse_call_or_resolution_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
+        let res = self.parse_resolution_expression()?;
+
+        if self.current().kind == SimplePunctuation(ParenOpen) {
+            return Ok(self.parse_call_expression(res)?);
+        }
+
+        return Ok(res);
+    }
+
+    fn parse_call_expression(
+        &mut self,
+        res: ExpressionNode,
+    ) -> Result<ExpressionNode, SyntaxError> {
+        let args = self.parse_call_arguments()?;
+
+        let mut expr = ExpressionNode {
+            kind: ExpressionKind::Call {
+                res: Box::new(res),
+                args,
+            },
+        };
+
+        self.advance();
+        if self.current().kind == SimplePunctuation(ParenOpen) {
+            expr = self.parse_call_expression(expr)?;
+        }
+
+        return Ok(expr);
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<ExpressionNode>, SyntaxError> {
+        self.expect(SimplePunctuation(ParenOpen))?;
+        let mut args = Vec::new();
+
+        loop {
+            self.advance();
+            if matches!(self.current().kind, SimplePunctuation(ParenClose) | EOF) {
+                break;
+            }
+
+            let expr = self.parse_expression()?;
+            args.push(expr);
+
+            if self.current().kind != SimplePunctuation(Comma) {
+                break;
+            }
+        }
+
+        self.expect(SimplePunctuation(ParenClose))?;
+        return Ok(args);
+    }
+
+    fn parse_resolution_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
+        let mut left = self.parse_primary_expression()?;
+
+        loop {
+            self.advance();
+
+            if !matches!(
+                self.current().kind,
+                ComplexPunctuation(MemberSeparator) | ComplexPunctuation(NamespaceSeparator)
+            ) {
+                break;
+            }
+
+            let kind = match self.current().kind {
+                ComplexPunctuation(MemberSeparator) => ResolutionExpressionKind::Member,
+                ComplexPunctuation(NamespaceSeparator) => ResolutionExpressionKind::Namespace,
+                _ => unreachable!(),
+            };
+
+            self.advance();
+            let right = self.parse_primary_expression()?;
+
+            left = ExpressionNode {
+                kind: ExpressionKind::Resolution {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                    kind,
+                },
+            };
+        }
+
+        return Ok(left);
     }
 
     fn parse_primary_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
@@ -443,6 +678,23 @@ impl<'a> Parser<'a> {
         };
 
         Ok(token)
+    }
+
+    fn expect_multiple(&mut self, kinds: Vec<TokenKind>) -> Result<Token, SyntaxError> {
+        let token = self.current();
+        if kinds.contains(&token.kind) {
+            return Ok(token);
+        }
+
+        let str_kinds: Vec<String> = kinds.iter().map(|kind| kind.to_string()).collect();
+        Err(SyntaxError::default()
+            .ctx(
+                ErrorContextBuilder::span(self.current().loc.start_col, self.current().loc.end_col)
+                    .from_src_and_ln(&self.src, self.current().loc.ln)
+                    .build(),
+            )
+            .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
+            .msg(format!("expected {}", str_kinds.join(" or "))))
     }
 }
 

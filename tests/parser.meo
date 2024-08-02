@@ -1,8 +1,24 @@
-func a();
-func b() -> int32;
-func c() -> output: int32;
+pub const HELLO_WORLD: string = "Hello World!";
+pub static mut my_static = 50 * 50 ** 2;
 
-func d(a: int32);
-func e(a: string, b: int32) -> int32;
-func f(a: bool, b: string = "ka fif") -> output: int32;
-func g(a: bool, b = "pa tur") -> output: int32;
+func main() {
+    console::write_ln(HELLO_WORLD);
+
+    {
+        console::write_ln(my_static);
+    }
+
+    func double(val: int32) {
+        return add(val, val);
+    }
+
+    let a = 5 + 5;
+    let mut b = 5 + 10 * 2;
+    let c: int32 = add(12, 24);
+
+    console::write_ln(a);
+    console::write_ln(b);
+    console::write_ln(c);
+}
+
+func add(x: int32, y: int32) => x + y;

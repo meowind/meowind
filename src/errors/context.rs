@@ -106,7 +106,7 @@ impl ErrorContext {
 
         let point_text = "HERE ^";
         let point_count = point_text.graphemes(true).count();
-        let point_body = point_text.pad(loc_count + point_col - 6, ' ', Alignment::Right, false);
+        let point_body = point_text.pad(loc_count + point_col - 5, ' ', Alignment::Right, false);
 
         return format!("{}: {ln_text}\n{CYAN}{BOLD}{point_body}{RESET}", loc);
     }

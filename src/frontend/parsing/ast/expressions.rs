@@ -14,6 +14,21 @@ pub enum ExpressionKind {
         value: String,
     },
 
+    Identifier {
+        name: String,
+    },
+
+    Call {
+        res: Box<ExpressionNode>,
+        args: Vec<ExpressionNode>,
+    },
+
+    Resolution {
+        left: Box<ExpressionNode>,
+        right: Box<ExpressionNode>,
+        kind: ResolutionExpressionKind,
+    },
+
     Binary {
         kind: BinaryExpressionKind,
         left: Box<ExpressionNode>,
@@ -25,19 +40,6 @@ pub enum ExpressionKind {
         kind: UnaryExpressionKind,
         op: ComplexPunctuationKind,
         right: Box<ExpressionNode>,
-    },
-
-    Call {
-        func: String,
-        args: Vec<ExpressionNode>,
-    },
-
-    Array {
-        elements: Vec<ExpressionNode>,
-    },
-
-    Identifier {
-        name: String,
     },
 }
 
@@ -124,4 +126,10 @@ impl BinaryExpressionKind {
             BinaryExpressionKind::Exponential => 2,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ResolutionExpressionKind {
+    Namespace,
+    Member,
 }

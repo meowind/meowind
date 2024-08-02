@@ -69,13 +69,17 @@ impl ToString for LiteralKind {
 pub enum KeywordKind {
     Var,
     Func,
+
     Mut,
     Pub,
+
     Const,
     Static,
-    Use,
+
     True,
     False,
+
+    Return,
 }
 
 impl FromStr for KeywordKind {
@@ -83,15 +87,19 @@ impl FromStr for KeywordKind {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "var" => Ok(Self::Var),
+            "let" => Ok(Self::Var),
             "func" => Ok(Self::Func),
+
             "mut" => Ok(Self::Mut),
             "pub" => Ok(Self::Pub),
+
             "const" => Ok(Self::Const),
             "static" => Ok(Self::Static),
-            "use" => Ok(Self::Use),
+
             "true" => Ok(Self::True),
             "false" => Ok(Self::False),
+
+            "return" => Ok(Self::Return),
             _ => Err(()),
         }
     }
@@ -177,6 +185,10 @@ pub enum ComplexPunctuationKind {
 
     AngleOpen,
     AngleClose,
+
+    Tilde,
+
+    InlineBlock,
 }
 
 impl FromStr for ComplexPunctuationKind {
@@ -215,6 +227,10 @@ impl FromStr for ComplexPunctuationKind {
 
             "<" => Ok(Self::AngleOpen),
             ">" => Ok(Self::AngleClose),
+
+            "~" => Ok(Self::Tilde),
+
+            "=>" => Ok(Self::InlineBlock),
             _ => Err(()),
         }
     }
@@ -254,6 +270,10 @@ impl ToString for ComplexPunctuationKind {
 
             Self::AngleOpen => "<",
             Self::AngleClose => ">",
+
+            Self::Tilde => "~",
+
+            Self::InlineBlock => "=>",
         }
         .to_string()
     }

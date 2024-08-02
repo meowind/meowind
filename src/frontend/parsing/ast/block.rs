@@ -1,13 +1,24 @@
-use super::{expressions::ExpressionNode, statements::StatementNode};
+use super::statements::StatementNode;
 
 #[derive(Debug)]
 pub struct BlockNode {
-    pub elements: Vec<BlockElementKind>,
+    pub kind: BlockKind,
+}
+
+#[derive(Debug)]
+pub enum BlockKind {
+    Inline(Box<BlockElementNode>),
+    Multiline(Vec<BlockElementNode>),
+}
+
+#[derive(Debug)]
+pub struct BlockElementNode {
+    pub kind: BlockElementKind,
 }
 
 #[derive(Debug)]
 pub enum BlockElementKind {
     Statement(StatementNode),
-    Expression(ExpressionNode),
     Block(BlockNode),
+    Empty,
 }
