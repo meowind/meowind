@@ -51,7 +51,7 @@ structure: `<op> <expr>`
 example: `my_var`
 
 ### call
-structure: `<expr>([<expr>, ...])`\
+structure: `<expr>([<expr>, ...])`
 
 ### resolution
 example: `namespace_a::namespace_b::some_item.some_member`
