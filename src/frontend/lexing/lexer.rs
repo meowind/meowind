@@ -11,7 +11,6 @@ use crate::{
     errors::{
         context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
-        MeowindErrorList,
     },
     frontend::Loc,
     structs::{ScriptSource, DEFAULT_SRC_CONTENTS},
@@ -23,7 +22,7 @@ pub struct Lexer<'a> {
     pub src: ScriptSource<'a>,
 
     pub tokens: Vec<Token>,
-    pub errors: MeowindErrorList<SyntaxError>,
+    pub errors: Vec<SyntaxError>,
 
     cur_ln: usize,
     cur_col: usize,
@@ -402,7 +401,7 @@ impl<'a> Default for Lexer<'a> {
         Self {
             src: ScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS),
             tokens: Vec::new(),
-            errors: MeowindErrorList::new(),
+            errors: Vec::new(),
 
             cur_ln: 1,
             cur_col: 0,

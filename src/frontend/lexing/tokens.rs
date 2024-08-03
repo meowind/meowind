@@ -190,7 +190,7 @@ pub enum ComplexPunctuationKind {
 
     Tilde,
 
-    InlineBlock,
+    InlineBody,
 }
 
 impl FromStr for ComplexPunctuationKind {
@@ -224,7 +224,7 @@ impl FromStr for ComplexPunctuationKind {
 
             "~" => Ok(Self::Tilde),
 
-            "=>" => Ok(Self::InlineBlock),
+            "=>" => Ok(Self::InlineBody),
             _ => match AssignmentKind::from_str(s) {
                 Ok(kind) => Ok(Self::Assignment(kind)),
                 Err(_) => Err(()),
@@ -266,7 +266,7 @@ impl ToString for ComplexPunctuationKind {
 
             Self::Tilde => "~",
 
-            Self::InlineBlock => "=>",
+            Self::InlineBody => "=>",
 
             Self::Assignment(_) => unreachable!(),
         }

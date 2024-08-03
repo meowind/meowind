@@ -4,7 +4,6 @@ use crate::{
     errors::{
         context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
-        MeowindErrorList,
     },
     frontend::{
         lexing::{
@@ -21,12 +20,11 @@ use crate::{
 };
 
 use super::ast::{
-    block::{BlockElementKind, BlockElementNode, BlockKind, BlockNode},
+    body::{BodyElementKind, BodyElementNode, BodyKind, BodyNode},
     expressions::{BinaryExpressionKind, ExpressionKind, ExpressionNode, ResolutionExpressionKind},
     functions::{ArgumentNode, FunctionNode},
     items::{ConstantNode, ItemKind, ItemNode, StaticNode},
-    namespace::{NamespaceKind, NamespaceNode},
-    project::{ProjectKind, ProjectNode},
+    project::ProjectNode,
     r#type::TypeNode,
     statements::{
         IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode, WhileLoopKind,
@@ -36,7 +34,7 @@ use super::ast::{
 
 pub struct Parser<'a> {
     pub project: ProjectNode,
-    pub errors: MeowindErrorList<SyntaxError>,
+    pub errors: Vec<SyntaxError>,
 
     tokens: &'a Vec<Token>,
     src: ScriptSource<'a>,
@@ -194,7 +192,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let body = self.parse_block()?;
+        let body = self.parse_body()?;
 
         return Ok(FunctionNode {
             name: name_token.value.unwrap(),
@@ -205,24 +203,24 @@ impl<'a> Parser<'a> {
         });
     }
 
-    fn parse_block(&mut self) -> Result<BlockNode, SyntaxError> {
+    fn parse_body(&mut self) -> Result<BodyNode, SyntaxError> {
         let token = self.expect_multiple(vec![
             SimplePunctuation(BraceOpen),
-            ComplexPunctuation(InlineBlock),
+            ComplexPunctuation(InlineBody),
         ])?;
 
-        let block = match token.kind {
-            SimplePunctuation(BraceOpen) => self.parse_multiline_block()?,
-            ComplexPunctuation(InlineBlock) => self.parse_inline_block()?,
+        let body = match token.kind {
+            SimplePunctuation(BraceOpen) => self.parse_multiline_body()?,
+            ComplexPunctuation(InlineBody) => self.parse_inline_body()?,
             _ => unreachable!(),
         };
 
-        return Ok(block);
+        return Ok(body);
     }
 
-    fn parse_multiline_block(&mut self) -> Result<BlockNode, SyntaxError> {
+    fn parse_multiline_body(&mut self) -> Result<BodyNode, SyntaxError> {
         self.expect(SimplePunctuation(BraceOpen))?;
-        let mut els: Vec<BlockElementNode> = Vec::new();
+        let mut els: Vec<BodyElementNode> = Vec::new();
 
         loop {
             self.advance();
@@ -232,49 +230,49 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let el = self.parse_block_element()?;
+            let el = self.parse_body_element()?;
             els.push(el);
         }
 
         self.expect(SimplePunctuation(BraceClose))?;
 
-        Ok(BlockNode {
-            kind: BlockKind::Multiline(els),
+        Ok(BodyNode {
+            kind: BodyKind::Multiline(els),
         })
     }
 
-    fn parse_inline_block(&mut self) -> Result<BlockNode, SyntaxError> {
-        self.expect(ComplexPunctuation(InlineBlock))?;
+    fn parse_inline_body(&mut self) -> Result<BodyNode, SyntaxError> {
+        self.expect(ComplexPunctuation(InlineBody))?;
 
         self.advance();
-        let el = self.parse_block_element()?;
+        let el = self.parse_body_element()?;
 
-        Ok(BlockNode {
-            kind: BlockKind::Inline(Box::new(el)),
+        Ok(BodyNode {
+            kind: BodyKind::Inline(Box::new(el)),
         })
     }
 
-    fn parse_block_element(&mut self) -> Result<BlockElementNode, SyntaxError> {
+    fn parse_body_element(&mut self) -> Result<BodyElementNode, SyntaxError> {
         let token = self.current();
 
         if token.kind == SimplePunctuation(Semicolon) {
-            return Ok(BlockElementNode {
-                kind: BlockElementKind::Empty,
+            return Ok(BodyElementNode {
+                kind: BodyElementKind::Empty,
             });
         }
 
         if token.kind == SimplePunctuation(BraceOpen) {
-            let block = self.parse_multiline_block()?;
+            let body = self.parse_multiline_body()?;
 
-            return Ok(BlockElementNode {
-                kind: BlockElementKind::Block(block),
+            return Ok(BodyElementNode {
+                kind: BodyElementKind::Body(body),
             });
         }
 
         let stmt = self.parse_statement()?;
 
-        Ok(BlockElementNode {
-            kind: BlockElementKind::Statement(stmt),
+        Ok(BodyElementNode {
+            kind: BodyElementKind::Statement(stmt),
         })
     }
 
@@ -369,7 +367,7 @@ impl<'a> Parser<'a> {
         self.advance();
 
         let cond = self.parse_expression()?;
-        let block = self.parse_block()?;
+        let body = self.parse_body()?;
 
         self.advance();
 
@@ -381,17 +379,17 @@ impl<'a> Parser<'a> {
                 let else_if = self.parse_if_statement()?;
                 r#else = Some(Box::new(else_if));
             } else {
-                let else_block = self.parse_block()?;
+                let else_body = self.parse_body()?;
                 r#else = Some(Box::new(IfNode {
                     kind: IfKind::Else,
-                    body: else_block,
+                    body: else_body,
                 }));
             }
         }
 
         return Ok(IfNode {
             kind: IfKind::If { cond, r#else },
-            body: block,
+            body,
         });
     }
 
@@ -400,7 +398,7 @@ impl<'a> Parser<'a> {
         self.advance();
 
         let cond = self.parse_expression()?;
-        let block = self.parse_block()?;
+        let body = self.parse_body()?;
 
         self.advance();
 
@@ -412,17 +410,17 @@ impl<'a> Parser<'a> {
                 let else_while = self.parse_while_loop()?;
                 r#else = Some(Box::new(else_while));
             } else {
-                let else_block = self.parse_block()?;
+                let else_body = self.parse_body()?;
                 r#else = Some(Box::new(WhileLoopNode {
                     kind: WhileLoopKind::Else,
-                    body: else_block,
+                    body: else_body,
                 }));
             }
         }
 
         return Ok(WhileLoopNode {
             kind: WhileLoopKind::While { cond, r#else },
-            body: block,
+            body,
         });
     }
 
@@ -522,7 +520,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.parse_binary_expression_operand(&bin_kind)?;
 
         while let ComplexPunctuation(punct_kind) = self.current().kind {
-            if matches!(punct_kind, Assignment(_) | InlineBlock) {
+            if matches!(punct_kind, Assignment(_) | InlineBody) {
                 break;
             }
 
@@ -790,12 +788,8 @@ impl<'a> Default for Parser<'a> {
     fn default() -> Self {
         Self {
             tokens: DEFAULT_TOKENS,
-            errors: MeowindErrorList::new(),
-            project: ProjectNode {
-                name: "project".to_string(),
-                kind: ProjectKind::Program,
-                root: NamespaceNode::new(NamespaceKind::Root, Vec::new()),
-            },
+            errors: Vec::new(),
+            project: ProjectNode::default(),
             src: ScriptSource::default(),
             cursor: 0,
         }

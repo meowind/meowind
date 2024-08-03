@@ -2,7 +2,10 @@
     "cSpell.words": [
         "appender",
         "canonicalize",
+        "codegen",
+        "cranelift",
         "meowind",
+        "middlend",
         "nanos",
         "paren",
         "punct",

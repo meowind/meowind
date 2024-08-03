@@ -1,5 +1,5 @@
 use super::{
-    block::BlockNode, expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode,
+    body::BodyNode, expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode,
 };
 
 #[derive(Debug)]
@@ -28,7 +28,7 @@ pub struct VariableDeclarationNode {
 #[derive(Debug)]
 pub struct IfNode {
     pub kind: IfKind,
-    pub body: BlockNode,
+    pub body: BodyNode,
 }
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ pub enum IfKind {
 #[derive(Debug)]
 pub struct WhileLoopNode {
     pub kind: WhileLoopKind,
-    pub body: BlockNode,
+    pub body: BodyNode,
 }
 
 #[derive(Debug)]

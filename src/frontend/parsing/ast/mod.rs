@@ -1,4 +1,4 @@
-pub mod block;
+pub mod body;
 pub mod expressions;
 pub mod functions;
 pub mod items;

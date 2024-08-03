@@ -93,7 +93,7 @@ pub static mut c = "hello " + "world!";
 pub static mut d: bool = true;
 ```
 ### functions
-structure: `[pub] func <name>([<name>[: <type>] [= <expr>], ...]) [-> <type> | <name>: <type>] <block>`\
+structure: `[pub] func <name>([<name>[: <type>] [= <expr>], ...]) [-> <type> | <name>: <type>] <body>`\
 examples:
 ```
 func a() { }
@@ -102,11 +102,11 @@ pub func c(x: int32) { }
 pub func d(x: int32) -> string { }
 pub func e(x: int32) -> output: string { }
 ```
-## blocks
-### inline block
-structure: `<stmt> => <expr|stmt|block>;`
-### multiline block
-structure: `<stmt> { [<expr|stmt|block>; ...] }`
+## bodies
+### body
+structure: `<stmt> => <expr|stmt|body>;`
+### multiline body
+structure: `<stmt> { [<expr|stmt|body>; ...] }`
 ## statements
 ### variable declaration
 structure: `let [mut] <name>[: <type>] [= <expr>];`\
@@ -121,7 +121,7 @@ let mut d: bool = true;
 same as function declaration in items, but without `pub` keyword, [read here](#functions)
 
 ### if statement
-structure: `if <expr> <block> [else <if statement> | else <block>]`
+structure: `if <expr> <body> [else <if statement> | else <body>]`
 example:
 ```
 if a == 0 { }
@@ -130,7 +130,7 @@ else if a == 2 { }
 else { }
 ```
 ### while loop
-structure: `while <expr> <block> [else <while loop> | else <block>]`
+structure: `while <expr> <body> [else <while loop> | else <body>]`
 example:
 ```
 while a == 0 { }
