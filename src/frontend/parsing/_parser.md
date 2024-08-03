@@ -61,6 +61,20 @@ example: `namespace_a::namespace_b::some_item.some_member`
 | `namespace` | `::` | `namespace_a::namespace_b` |
 | `member` | `.` | `some_item.some_member` |
 
+### assignments
+structure: `<expr> <ass> <expr>`
+
+#### assignments
+| Name          | Token         |
+| ------------- | ------------- |
+| `straight` | `=` |
+| `plus equals` | `+=` |
+| `minus equals` | `-=` |
+| `multiply equals` | `*=` |
+| `divide equals` | `/=` |
+| `modulo equals` | `%=` |
+| `power equals` | `**=` |
+
 ## items
 ### constants
 structure: `[pub] const <name>: <type> = <expr>;`\
@@ -98,15 +112,23 @@ structure: `<stmt> { [<expr|stmt|block>; ...] }`
 structure: `let [mut] <name>[: <type>] [= <expr>];`\
 examples:
 ```
-func main() {
-    let a: int32;
-    let b = 50;
-    let c: int32 = 50;
-    let mut d: bool = true;
-}
+let a: int32;
+let b = 50;
+let c: int32 = 50;
+let mut d: bool = true;
 ```
 ### function declaration
 same as function declaration in items, but without `pub` keyword, [read here](#functions)
+
+### if statement
+structure: `if <expr> <block> [else <if statement> | else <block>]`
+example:
+```
+if a == 0 { }
+else if a == 1 => ;
+else if a == 2 { }
+else { }
+```
 
 ### return
 structure: `return <expr>;`
