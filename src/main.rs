@@ -2,7 +2,6 @@
 #[allow(unused)]
 pub mod errors;
 pub mod frontend;
-pub mod middlend;
 pub mod structs;
 pub mod utils;
 
@@ -11,7 +10,7 @@ use std::time::Instant;
 use errors::ErrorList;
 use frontend::{
     lexing::Token,
-    parsing::{ast::project::ProjectNode, Parser},
+    parsing::{ast::projects::ProjectNode, Parser},
 };
 
 use crate::{

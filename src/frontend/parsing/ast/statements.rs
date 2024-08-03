@@ -1,5 +1,5 @@
 use super::{
-    body::BodyNode, expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode,
+    bodies::BodyNode, expressions::ExpressionNode, functions::FunctionNode, types::TypeNode,
 };
 
 #[derive(Debug)]

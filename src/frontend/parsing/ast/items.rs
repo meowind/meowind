@@ -1,4 +1,4 @@
-use super::{expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode};
+use super::{expressions::ExpressionNode, functions::FunctionNode, types::TypeNode};
 
 #[derive(Debug)]
 pub struct ItemNode {

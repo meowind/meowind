@@ -1,4 +1,4 @@
-use super::{body::BodyNode, expressions::ExpressionNode, r#type::TypeNode};
+use super::{bodies::BodyNode, expressions::ExpressionNode, types::TypeNode};
 
 #[derive(Debug)]
 pub struct ArgumentNode {

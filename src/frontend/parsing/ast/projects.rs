@@ -1,4 +1,4 @@
-use super::namespace::{NamespaceKind, NamespaceNode};
+use super::namespaces::{NamespaceKind, NamespaceNode};
 
 #[derive(Debug)]
 pub struct ProjectNode {
