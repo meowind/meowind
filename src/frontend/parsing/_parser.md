@@ -129,6 +129,15 @@ else if a == 1 => ;
 else if a == 2 { }
 else { }
 ```
+### while loop
+structure: `while <expr> <block> [else <while loop> | else <block>]`
+example:
+```
+while a == 0 { }
+else while a == 1 => ;
+else while a == 2 { }
+else { }
+```
 
 ### return
 structure: `return <expr>;`

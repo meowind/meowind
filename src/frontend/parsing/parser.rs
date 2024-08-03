@@ -28,7 +28,10 @@ use super::ast::{
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
     r#type::TypeNode,
-    statements::{IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode},
+    statements::{
+        IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode, WhileLoopKind,
+        WhileLoopNode,
+    },
 };
 
 pub struct Parser<'a> {
@@ -296,6 +299,10 @@ impl<'a> Parser<'a> {
                 let if_stmt = self.parse_if_statement()?;
                 StatementKind::If(if_stmt)
             }
+            Keyword(While) => {
+                let while_loop = self.parse_while_loop()?;
+                StatementKind::WhileLoop(while_loop)
+            }
             _ => {
                 let expr = self.parse_expression()?;
                 self.expect(SimplePunctuation(Semicolon))?;
@@ -384,6 +391,37 @@ impl<'a> Parser<'a> {
 
         return Ok(IfNode {
             kind: IfKind::If { cond, r#else },
+            body: block,
+        });
+    }
+
+    fn parse_while_loop(&mut self) -> Result<WhileLoopNode, SyntaxError> {
+        self.expect(Keyword(While))?;
+        self.advance();
+
+        let cond = self.parse_expression()?;
+        let block = self.parse_block()?;
+
+        self.advance();
+
+        let mut r#else = None;
+        if self.current().kind == Keyword(Else) {
+            self.advance();
+
+            if self.current().kind == Keyword(While) {
+                let else_while = self.parse_while_loop()?;
+                r#else = Some(Box::new(else_while));
+            } else {
+                let else_block = self.parse_block()?;
+                r#else = Some(Box::new(WhileLoopNode {
+                    kind: WhileLoopKind::Else,
+                    body: else_block,
+                }));
+            }
+        }
+
+        return Ok(WhileLoopNode {
+            kind: WhileLoopKind::While { cond, r#else },
             body: block,
         });
     }

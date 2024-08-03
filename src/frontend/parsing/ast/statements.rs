@@ -42,8 +42,15 @@ pub enum IfKind {
 
 #[derive(Debug)]
 pub struct WhileLoopNode {
-    pub cond: ExpressionNode,
+    pub kind: WhileLoopKind,
     pub body: BlockNode,
-    pub else_while_blocks: Vec<WhileLoopNode>,
-    pub else_block: Option<BlockNode>,
+}
+
+#[derive(Debug)]
+pub enum WhileLoopKind {
+    While {
+        cond: ExpressionNode,
+        r#else: Option<Box<WhileLoopNode>>,
+    },
+    Else,
 }
