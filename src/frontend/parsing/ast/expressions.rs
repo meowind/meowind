@@ -1,6 +1,6 @@
 use std::isize;
 
-use crate::frontend::lexing::{ComplexPunctuationKind, LiteralKind};
+use crate::frontend::lexing::{AssignmentKind, ComplexPunctuationKind, LiteralKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionNode {
@@ -39,6 +39,12 @@ pub enum ExpressionKind {
     Unary {
         kind: UnaryExpressionKind,
         op: ComplexPunctuationKind,
+        right: Box<ExpressionNode>,
+    },
+
+    Assignment {
+        left: Box<ExpressionNode>,
+        op: AssignmentKind,
         right: Box<ExpressionNode>,
     },
 }

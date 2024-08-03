@@ -8,6 +8,7 @@ use crate::{
     },
     frontend::{
         lexing::{
+            AssignmentKind::*,
             ComplexPunctuationKind::*,
             KeywordKind::*,
             SimplePunctuationKind::*,
@@ -111,7 +112,7 @@ impl<'a> Parser<'a> {
         let r#type = self.parse_type()?;
 
         self.advance();
-        self.expect(ComplexPunctuation(Assignment))?;
+        self.expect(ComplexPunctuation(Assignment(Straight)))?;
 
         self.advance();
         let expression = self.parse_expression()?;
@@ -147,7 +148,7 @@ impl<'a> Parser<'a> {
             self.advance();
         }
 
-        self.expect(ComplexPunctuation(Assignment))?;
+        self.expect(ComplexPunctuation(Assignment(Straight)))?;
 
         self.advance();
         let expression = self.parse_expression()?;
@@ -332,7 +333,7 @@ impl<'a> Parser<'a> {
 
         let mut value = None;
 
-        if self.current().kind == ComplexPunctuation(Assignment) {
+        if self.current().kind == ComplexPunctuation(Assignment(Straight)) {
             self.advance();
             value = Some(self.parse_expression()?);
         }
@@ -382,7 +383,7 @@ impl<'a> Parser<'a> {
 
             let mut value = None;
 
-            if self.current().kind == ComplexPunctuation(Assignment) {
+            if self.current().kind == ComplexPunctuation(Assignment(Straight)) {
                 self.advance();
                 value = Some(self.parse_expression()?);
             }
@@ -425,7 +426,26 @@ impl<'a> Parser<'a> {
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Expression)));
         }
 
-        self.parse_binary_expression(BinaryExpressionKind::lowest())
+        self.parse_assignment_expression()
+    }
+
+    fn parse_assignment_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
+        let mut left = self.parse_binary_expression(BinaryExpressionKind::lowest())?;
+
+        if let ComplexPunctuation(Assignment(kind)) = self.current().kind {
+            self.advance();
+            let right = self.parse_assignment_expression()?;
+
+            left = ExpressionNode {
+                kind: ExpressionKind::Assignment {
+                    left: Box::new(left),
+                    op: kind,
+                    right: Box::new(right),
+                },
+            };
+        }
+
+        return Ok(left);
     }
 
     fn parse_binary_expression(
@@ -435,6 +455,10 @@ impl<'a> Parser<'a> {
         let mut expr = self.parse_binary_expression_operand(&bin_kind)?;
 
         while let ComplexPunctuation(punct_kind) = self.current().kind {
+            if matches!(punct_kind, Assignment(_)) {
+                break;
+            }
+
             let token = self.current();
 
             let Ok(punct_bin_kind) = BinaryExpressionKind::from_punct(&punct_kind) else {
@@ -478,11 +502,6 @@ impl<'a> Parser<'a> {
             self.parse_binary_expression(more_precedence)?
         } else {
             self.parse_call_or_resolution_expression()?
-
-            /* before
-                self.advance();
-                prim_expr
-            */
         };
 
         return Ok(expr);

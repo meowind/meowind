@@ -1,24 +1,4 @@
-pub const HELLO_WORLD: string = "Hello World!";
-pub static mut my_static = 50 * 50 ** 2;
-
 func main() {
-    console::write_ln(HELLO_WORLD);
-
-    {
-        console::write_ln(my_static);
-    }
-
-    func double(val: int32) {
-        return add(val, val);
-    }
-
-    let a = 5 + 5;
-    let mut b = 5 + 10 * 2;
-    let c: int32 = add(12, 24);
-
-    console::write_ln(a);
-    console::write_ln(b);
-    console::write_ln(c);
+    let mut xyi = 50;
+    xyi += 25;
 }
-
-func add(x: int32, y: int32) => x + y;

@@ -1,4 +1,6 @@
-use super::{expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode};
+use super::{
+    block::BlockNode, expressions::ExpressionNode, functions::FunctionNode, r#type::TypeNode,
+};
 
 #[derive(Debug)]
 pub struct StatementNode {
@@ -10,6 +12,7 @@ pub enum StatementKind {
     Expression(ExpressionNode),
     VariableDeclaration(VariableDeclarationNode),
     FunctionDeclaration(FunctionNode),
+    WhileLoop(WhileLoopNode),
     Return(ExpressionNode),
 }
 
@@ -19,4 +22,11 @@ pub struct VariableDeclarationNode {
     pub r#type: Option<TypeNode>,
     pub value: Option<ExpressionNode>,
     pub mutable: bool,
+}
+
+#[derive(Debug)]
+pub struct WhileLoopNode {
+    pub cond: ExpressionNode,
+    pub body: BlockNode,
+    pub never: Option<BlockNode>,
 }

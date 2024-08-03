@@ -170,13 +170,7 @@ pub enum ComplexPunctuationKind {
     OperatorOr,
     OperatorNot,
 
-    Assignment,
-    AssignmentPlus,
-    AssignmentMinus,
-    AssignmentMultiply,
-    AssignmentDivide,
-    AssignmentModulo,
-    AssignmentPower,
+    Assignment(AssignmentKind),
 
     ReturnSeparator,
     MemberSeparator,
@@ -212,14 +206,6 @@ impl FromStr for ComplexPunctuationKind {
             "||" => Ok(Self::OperatorOr),
             "!" => Ok(Self::OperatorNot),
 
-            "=" => Ok(Self::Assignment),
-            "+=" => Ok(Self::AssignmentPlus),
-            "-=" => Ok(Self::AssignmentMinus),
-            "*=" => Ok(Self::AssignmentMultiply),
-            "/=" => Ok(Self::AssignmentDivide),
-            "%=" => Ok(Self::AssignmentModulo),
-            "**=" => Ok(Self::AssignmentPower),
-
             "->" => Ok(Self::ReturnSeparator),
             "." => Ok(Self::MemberSeparator),
             "::" => Ok(Self::NamespaceSeparator),
@@ -231,13 +217,20 @@ impl FromStr for ComplexPunctuationKind {
             "~" => Ok(Self::Tilde),
 
             "=>" => Ok(Self::InlineBlock),
-            _ => Err(()),
+            _ => match AssignmentKind::from_str(s) {
+                Ok(kind) => Ok(Self::Assignment(kind)),
+                Err(_) => Err(()),
+            },
         }
     }
 }
 
 impl ToString for ComplexPunctuationKind {
     fn to_string(&self) -> String {
+        if let Self::Assignment(kind) = self {
+            return kind.to_string();
+        }
+
         match self {
             Self::OperatorPlus => "+",
             Self::OperatorMinus => "-",
@@ -255,14 +248,6 @@ impl ToString for ComplexPunctuationKind {
             Self::OperatorOr => "||",
             Self::OperatorNot => "!",
 
-            Self::Assignment => "=",
-            Self::AssignmentPlus => "+=",
-            Self::AssignmentMinus => "-=",
-            Self::AssignmentMultiply => "*=",
-            Self::AssignmentDivide => "/=",
-            Self::AssignmentModulo => "%=",
-            Self::AssignmentPower => "**=",
-
             Self::ReturnSeparator => "->",
             Self::MemberSeparator => ".",
             Self::NamespaceSeparator => "::",
@@ -274,6 +259,51 @@ impl ToString for ComplexPunctuationKind {
             Self::Tilde => "~",
 
             Self::InlineBlock => "=>",
+
+            Self::Assignment(_) => unreachable!(),
+        }
+        .to_string()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AssignmentKind {
+    Straight,
+    PlusEquals,
+    MinusEquals,
+    MultiplyEquals,
+    DivideEquals,
+    ModuloEquals,
+    PowerEquals,
+}
+
+impl FromStr for AssignmentKind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "=" => Ok(Self::Straight),
+            "+=" => Ok(Self::PlusEquals),
+            "-=" => Ok(Self::MinusEquals),
+            "*=" => Ok(Self::MultiplyEquals),
+            "/=" => Ok(Self::DivideEquals),
+            "%=" => Ok(Self::ModuloEquals),
+            "**=" => Ok(Self::PowerEquals),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ToString for AssignmentKind {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Straight => "=",
+            Self::PlusEquals => "+=",
+            Self::MinusEquals => "-=",
+            Self::MultiplyEquals => "*=",
+            Self::DivideEquals => "/=",
+            Self::ModuloEquals => "%=",
+            Self::PowerEquals => "**=",
         }
         .to_string()
     }
