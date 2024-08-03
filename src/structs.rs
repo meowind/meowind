@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-pub static DEFAULT_SRC_CONTENTS: &String = &String::new();
+pub static DEFAULT_SRC_CONTENTS: String = String::new();
 
 pub struct ScriptSource<'a> {
     pub path: PathBuf,
@@ -22,7 +22,7 @@ impl<'a> ScriptSource<'a> {
 
 impl Default for ScriptSource<'_> {
     fn default() -> Self {
-        ScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS)
+        ScriptSource::new(PathBuf::new(), &DEFAULT_SRC_CONTENTS)
     }
 }
 

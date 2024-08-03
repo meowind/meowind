@@ -118,12 +118,12 @@ impl<'a> Parser<'a> {
     }
 }
 
-static DEFAULT_TOKENS: &Vec<Token> = &Vec::new();
+static DEFAULT_TOKENS: Vec<Token> = Vec::new();
 
 impl<'a> Default for Parser<'a> {
     fn default() -> Self {
         Self {
-            tokens: DEFAULT_TOKENS,
+            tokens: &DEFAULT_TOKENS,
             errors: Vec::new(),
             project: ProjectNode::default(),
             src: ScriptSource::default(),

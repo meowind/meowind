@@ -399,7 +399,7 @@ impl<'a> Lexer<'a> {
 impl<'a> Default for Lexer<'a> {
     fn default() -> Self {
         Self {
-            src: ScriptSource::new(PathBuf::new(), DEFAULT_SRC_CONTENTS),
+            src: ScriptSource::new(PathBuf::new(), &DEFAULT_SRC_CONTENTS),
             tokens: Vec::new(),
             errors: Vec::new(),
 
