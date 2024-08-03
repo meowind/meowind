@@ -28,7 +28,7 @@ use super::ast::{
     namespace::{NamespaceKind, NamespaceNode},
     project::{ProjectKind, ProjectNode},
     r#type::TypeNode,
-    statements::{StatementKind, StatementNode, VariableDeclarationNode},
+    statements::{IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode},
 };
 
 pub struct Parser<'a> {
@@ -192,7 +192,6 @@ impl<'a> Parser<'a> {
         }
 
         let body = self.parse_block()?;
-        // TODO self.advance();
 
         return Ok(FunctionNode {
             name: name_token.value.unwrap(),
@@ -280,9 +279,6 @@ impl<'a> Parser<'a> {
         let stmt = match self.current().kind {
             Keyword(Var) => {
                 let var = self.parse_variable_declaration()?;
-
-                self.expect(SimplePunctuation(Semicolon))?;
-
                 StatementKind::VariableDeclaration(var)
             }
             Keyword(Func) => {
@@ -292,14 +288,16 @@ impl<'a> Parser<'a> {
             Keyword(Return) => {
                 self.advance();
                 let expr = self.parse_expression()?;
-
                 self.expect(SimplePunctuation(Semicolon))?;
 
                 StatementKind::Return(expr)
             }
+            Keyword(If) => {
+                let if_stmt = self.parse_if_statement()?;
+                StatementKind::If(if_stmt)
+            }
             _ => {
                 let expr = self.parse_expression()?;
-
                 self.expect(SimplePunctuation(Semicolon))?;
 
                 StatementKind::Expression(expr)
@@ -356,6 +354,37 @@ impl<'a> Parser<'a> {
             r#type,
             value,
             mutable,
+        });
+    }
+
+    fn parse_if_statement(&mut self) -> Result<IfNode, SyntaxError> {
+        self.expect(Keyword(If))?;
+        self.advance();
+
+        let cond = self.parse_expression()?;
+        let block = self.parse_block()?;
+
+        self.advance();
+
+        let mut r#else = None;
+        if self.current().kind == Keyword(Else) {
+            self.advance();
+
+            if self.current().kind == Keyword(If) {
+                let else_if = self.parse_if_statement()?;
+                r#else = Some(Box::new(else_if));
+            } else {
+                let else_block = self.parse_block()?;
+                r#else = Some(Box::new(IfNode {
+                    kind: IfKind::Else,
+                    body: else_block,
+                }));
+            }
+        }
+
+        return Ok(IfNode {
+            kind: IfKind::If { cond, r#else },
+            body: block,
         });
     }
 
@@ -455,7 +484,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.parse_binary_expression_operand(&bin_kind)?;
 
         while let ComplexPunctuation(punct_kind) = self.current().kind {
-            if matches!(punct_kind, Assignment(_)) {
+            if matches!(punct_kind, Assignment(_) | InlineBlock) {
                 break;
             }
 

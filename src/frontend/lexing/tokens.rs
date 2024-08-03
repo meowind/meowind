@@ -80,6 +80,10 @@ pub enum KeywordKind {
     False,
 
     Return,
+
+    While,
+    If,
+    Else,
 }
 
 impl FromStr for KeywordKind {
@@ -100,6 +104,10 @@ impl FromStr for KeywordKind {
             "false" => Ok(Self::False),
 
             "return" => Ok(Self::Return),
+
+            "while" => Ok(Self::While),
+            "if" => Ok(Self::If),
+            "else" => Ok(Self::Else),
             _ => Err(()),
         }
     }

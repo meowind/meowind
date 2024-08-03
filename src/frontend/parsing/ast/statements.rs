@@ -12,6 +12,7 @@ pub enum StatementKind {
     Expression(ExpressionNode),
     VariableDeclaration(VariableDeclarationNode),
     FunctionDeclaration(FunctionNode),
+    If(IfNode),
     WhileLoop(WhileLoopNode),
     Return(ExpressionNode),
 }
@@ -25,8 +26,24 @@ pub struct VariableDeclarationNode {
 }
 
 #[derive(Debug)]
+pub struct IfNode {
+    pub kind: IfKind,
+    pub body: BlockNode,
+}
+
+#[derive(Debug)]
+pub enum IfKind {
+    If {
+        cond: ExpressionNode,
+        r#else: Option<Box<IfNode>>,
+    },
+    Else,
+}
+
+#[derive(Debug)]
 pub struct WhileLoopNode {
     pub cond: ExpressionNode,
     pub body: BlockNode,
-    pub never: Option<BlockNode>,
+    pub else_while_blocks: Vec<WhileLoopNode>,
+    pub else_block: Option<BlockNode>,
 }
