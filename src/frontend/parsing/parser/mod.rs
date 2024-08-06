@@ -18,7 +18,7 @@ use super::ast::projects::ProjectNode;
 
 pub struct Parser<'a> {
     pub project: ProjectNode,
-    pub errors: Vec<SyntaxError>,
+    pub errors: Vec<SyntaxError<'a>>,
 
     tokens: &'a Vec<Token>,
     src: SourceFile<'a>,
