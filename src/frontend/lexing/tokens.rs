@@ -3,70 +3,68 @@ use std::{
     str::FromStr,
 };
 
-use crate::{frontend::Loc, utils::colors::*};
+use crate::{source::SourceSpan, utils::colors::*};
 
 #[derive(Clone, Debug)]
 pub struct Token {
-    pub loc: Loc,
-    pub kind: TokenKind,
+    pub span: SourceSpan,
+    pub kind: Tokens,
     pub value: Option<String>,
 }
 
 impl Token {
-    pub fn new(loc: Loc, kind: TokenKind, value: Option<String>) -> Token {
-        Token { loc, kind, value }
+    pub fn new(span: SourceSpan, kind: Tokens, value: Option<String>) -> Token {
+        Token { span, kind, value }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenKind {
-    Literal(LiteralKind),
+pub enum Tokens {
+    Literal(Literals),
 
     Identifier,
 
-    Keyword(KeywordKind),
-    SimplePunctuation(SimplePunctuationKind),
-    ComplexPunctuation(ComplexPunctuationKind),
+    Keyword(Keywords),
+    Punctuation(Punctuations),
 
     EOF,
     Undefined,
     InvalidIdentifier,
 }
 
-impl ToString for TokenKind {
+impl ToString for Tokens {
     fn to_string(&self) -> String {
         match self {
-            TokenKind::Literal(kind) => format!("{} literal", kind.to_string()),
-            TokenKind::Keyword(kind) => format!("keyword {}", kind.to_string()),
-            TokenKind::SimplePunctuation(kind) => format!("\"{}\"", kind.to_char()),
-            TokenKind::ComplexPunctuation(kind) => format!("\"{}\"", kind.to_string()),
+            Tokens::Literal(kind) => format!("{} literal", kind.to_string()),
+            Tokens::Keyword(kind) => format!("keyword {}", kind.to_string()),
+            Tokens::Punctuation(kind) => format!("\"{}\"", kind.to_string()),
             _ => format!("{:?}", self),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LiteralKind {
+pub enum Literals {
     Integer,
     Float,
     String,
     Boolean,
 }
 
-impl LiteralKind {
+impl Literals {
     pub fn is_number(&self) -> bool {
-        matches!(self, LiteralKind::Integer | LiteralKind::Float)
+        matches!(self, Literals::Integer | Literals::Float)
     }
 }
 
-impl ToString for LiteralKind {
+impl ToString for Literals {
     fn to_string(&self) -> String {
         format!("{:?}", self).to_lowercase()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KeywordKind {
+pub enum Keywords {
     Var,
     Func,
 
@@ -86,7 +84,7 @@ pub enum KeywordKind {
     Else,
 }
 
-impl FromStr for KeywordKind {
+impl FromStr for Keywords {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -113,55 +111,14 @@ impl FromStr for KeywordKind {
     }
 }
 
-impl ToString for KeywordKind {
+impl ToString for Keywords {
     fn to_string(&self) -> String {
         format!("{:?}", self).to_lowercase()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SimplePunctuationKind {
-    ParenOpen,
-    ParenClose,
-    BraceOpen,
-    BraceClose,
-    BracketOpen,
-    BracketClose,
-    Semicolon,
-    Comma,
-}
-
-impl SimplePunctuationKind {
-    pub fn from_char(ch: char) -> Result<Self, ()> {
-        match ch {
-            '(' => Ok(Self::ParenOpen),
-            ')' => Ok(Self::ParenClose),
-            '{' => Ok(Self::BraceOpen),
-            '}' => Ok(Self::BraceClose),
-            '[' => Ok(Self::BracketOpen),
-            ']' => Ok(Self::BracketClose),
-            ';' => Ok(Self::Semicolon),
-            ',' => Ok(Self::Comma),
-            _ => Err(()),
-        }
-    }
-
-    pub fn to_char(&self) -> char {
-        match self {
-            Self::ParenOpen => '(',
-            Self::ParenClose => ')',
-            Self::BraceOpen => '{',
-            Self::BraceClose => '}',
-            Self::BracketOpen => '[',
-            Self::BracketClose => ']',
-            Self::Semicolon => ';',
-            Self::Comma => ',',
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ComplexPunctuationKind {
+pub enum Punctuations {
     OperatorPlus,
     OperatorMinus,
     OperatorMultiply,
@@ -178,7 +135,7 @@ pub enum ComplexPunctuationKind {
     OperatorOr,
     OperatorNot,
 
-    Assignment(AssignmentKind),
+    Assignment(Assignments),
 
     ReturnSeparator,
     MemberSeparator,
@@ -191,9 +148,21 @@ pub enum ComplexPunctuationKind {
     Tilde,
 
     InlineBody,
+
+    ParenOpen,
+    ParenClose,
+
+    BraceOpen,
+    BraceClose,
+
+    BracketOpen,
+    BracketClose,
+
+    Semicolon,
+    Comma,
 }
 
-impl FromStr for ComplexPunctuationKind {
+impl FromStr for Punctuations {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -225,7 +194,20 @@ impl FromStr for ComplexPunctuationKind {
             "~" => Ok(Self::Tilde),
 
             "=>" => Ok(Self::InlineBody),
-            _ => match AssignmentKind::from_str(s) {
+
+            "(" => Ok(Self::ParenOpen),
+            ")" => Ok(Self::ParenClose),
+
+            "{" => Ok(Self::BraceOpen),
+            "}" => Ok(Self::BraceClose),
+
+            "[" => Ok(Self::BracketOpen),
+            "]" => Ok(Self::BracketClose),
+
+            ";" => Ok(Self::Semicolon),
+            "," => Ok(Self::Comma),
+
+            _ => match Assignments::from_str(s) {
                 Ok(kind) => Ok(Self::Assignment(kind)),
                 Err(_) => Err(()),
             },
@@ -233,7 +215,7 @@ impl FromStr for ComplexPunctuationKind {
     }
 }
 
-impl ToString for ComplexPunctuationKind {
+impl ToString for Punctuations {
     fn to_string(&self) -> String {
         if let Self::Assignment(kind) = self {
             return kind.to_string();
@@ -268,6 +250,18 @@ impl ToString for ComplexPunctuationKind {
 
             Self::InlineBody => "=>",
 
+            Self::ParenOpen => "(",
+            Self::ParenClose => ")",
+
+            Self::BraceOpen => "{",
+            Self::BraceClose => "}",
+
+            Self::BracketOpen => "[",
+            Self::BracketClose => "]",
+
+            Self::Semicolon => ";",
+            Self::Comma => ",",
+
             Self::Assignment(_) => unreachable!(),
         }
         .to_string()
@@ -275,43 +269,43 @@ impl ToString for ComplexPunctuationKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AssignmentKind {
+pub enum Assignments {
     Straight,
-    PlusEquals,
-    MinusEquals,
-    MultiplyEquals,
-    DivideEquals,
-    ModuloEquals,
-    PowerEquals,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
+    Power,
 }
 
-impl FromStr for AssignmentKind {
+impl FromStr for Assignments {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "=" => Ok(Self::Straight),
-            "+=" => Ok(Self::PlusEquals),
-            "-=" => Ok(Self::MinusEquals),
-            "*=" => Ok(Self::MultiplyEquals),
-            "/=" => Ok(Self::DivideEquals),
-            "%=" => Ok(Self::ModuloEquals),
-            "**=" => Ok(Self::PowerEquals),
+            "+=" => Ok(Self::Add),
+            "-=" => Ok(Self::Subtract),
+            "*=" => Ok(Self::Multiply),
+            "/=" => Ok(Self::Divide),
+            "%=" => Ok(Self::Modulo),
+            "**=" => Ok(Self::Power),
             _ => Err(()),
         }
     }
 }
 
-impl ToString for AssignmentKind {
+impl ToString for Assignments {
     fn to_string(&self) -> String {
         match self {
             Self::Straight => "=",
-            Self::PlusEquals => "+=",
-            Self::MinusEquals => "-=",
-            Self::MultiplyEquals => "*=",
-            Self::DivideEquals => "/=",
-            Self::ModuloEquals => "%=",
-            Self::PowerEquals => "**=",
+            Self::Add => "+=",
+            Self::Subtract => "-=",
+            Self::Multiply => "*=",
+            Self::Divide => "/=",
+            Self::Modulo => "%=",
+            Self::Power => "**=",
         }
         .to_string()
     }
@@ -320,7 +314,7 @@ impl ToString for AssignmentKind {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = if let Some(value) = &self.value {
-            if self.kind == TokenKind::Literal(LiteralKind::String) {
+            if self.kind == Tokens::Literal(Literals::String) {
                 format!("\"{BOLD}{}\"{RESET}", value)
             } else {
                 format!("{BOLD}{}{RESET}", value)
@@ -330,12 +324,9 @@ impl fmt::Display for Token {
         };
 
         let kind = match &self.kind {
-            TokenKind::Literal(kind) => format!("{:?}", kind),
-            TokenKind::Keyword(kind) => format!("Keyword {BOLD}{}{RESET}", kind.to_string()),
-            TokenKind::SimplePunctuation(kind) => {
-                format!("{:?}", kind)
-            }
-            TokenKind::ComplexPunctuation(kind) => {
+            Tokens::Literal(kind) => format!("{:?}", kind),
+            Tokens::Keyword(kind) => format!("Keyword {BOLD}{}{RESET}", kind.to_string()),
+            Tokens::Punctuation(kind) => {
                 format!("{:?}", kind)
             }
             _ => format!("{:?}", self.kind),
@@ -343,7 +334,7 @@ impl fmt::Display for Token {
 
         let loc = format!(
             "{GRAY}l:{WHITE}{}{GRAY}, c:{WHITE}{}-{}{RESET}",
-            self.loc.ln, self.loc.start_col, self.loc.end_col
+            self.span.start.ln, self.span.start.col, self.span.end.col
         );
 
         write!(f, "{:>38} | {} {}", loc, kind, value)

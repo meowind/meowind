@@ -1,51 +1,49 @@
 use crate::{
     errors::{
-        context::ErrorContextBuilder,
+        context::ErrorContext,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
     frontend::{
-        lexing::{
-            AssignmentKind::*, ComplexPunctuationKind::*, KeywordKind::*, SimplePunctuationKind::*,
-            TokenKind::*,
-        },
+        lexing::{Assignments, Keywords, Punctuations, Tokens},
         parsing::ast::statements::{
             IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode, WhileLoopKind,
             WhileLoopNode,
         },
     },
+    source::SourcePoint,
 };
 
 use super::Parser;
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
     pub(super) fn parse_statement(&mut self) -> Result<StatementNode, SyntaxError> {
         let stmt = match self.current().kind {
-            Keyword(Var) => {
+            Tokens::Keyword(Keywords::Var) => {
                 let var = self.parse_variable_declaration()?;
                 StatementKind::VariableDeclaration(var)
             }
-            Keyword(Func) => {
+            Tokens::Keyword(Keywords::Func) => {
                 let func = self.parse_function()?;
                 StatementKind::FunctionDeclaration(func)
             }
-            Keyword(Return) => {
+            Tokens::Keyword(Keywords::Return) => {
                 self.advance();
                 let expr = self.parse_expression()?;
-                self.expect(SimplePunctuation(Semicolon))?;
+                self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
 
                 StatementKind::Return(expr)
             }
-            Keyword(If) => {
+            Tokens::Keyword(Keywords::If) => {
                 let if_stmt = self.parse_if_statement()?;
                 StatementKind::If(if_stmt)
             }
-            Keyword(While) => {
+            Tokens::Keyword(Keywords::While) => {
                 let while_loop = self.parse_while_loop()?;
                 StatementKind::WhileLoop(while_loop)
             }
             _ => {
                 let expr = self.parse_expression()?;
-                self.expect(SimplePunctuation(Semicolon))?;
+                self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
 
                 StatementKind::Expression(expr)
             }
@@ -55,21 +53,21 @@ impl Parser<'_> {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<VariableDeclarationNode, SyntaxError> {
-        self.expect(Keyword(Var))?;
+        self.expect(Tokens::Keyword(Keywords::Var))?;
         self.advance();
 
         let mut mutable = false;
-        if self.current().kind == Keyword(Mut) {
+        if self.current().kind == Tokens::Keyword(Keywords::Mut) {
             mutable = true;
             self.advance();
         }
 
-        let name_token = self.expect(Identifier)?;
+        let name_token = self.expect(Tokens::Identifier)?;
 
         self.advance();
         let mut r#type = None;
 
-        if self.current().kind == ComplexPunctuation(Colon) {
+        if self.current().kind == Tokens::Punctuation(Punctuations::Colon) {
             self.advance();
             r#type = Some(self.parse_type()?);
 
@@ -78,23 +76,25 @@ impl Parser<'_> {
 
         let mut value = None;
 
-        if self.current().kind == ComplexPunctuation(Assignment(Straight)) {
+        if self.current().kind
+            == Tokens::Punctuation(Punctuations::Assignment(Assignments::Straight))
+        {
             self.advance();
             value = Some(self.parse_expression()?);
         }
 
         if r#type == None && value == None {
             return Err(SyntaxError::default()
-                .ctx(
-                    ErrorContextBuilder::span(name_token.loc.start_col, name_token.loc.end_col)
-                        .from_src_and_ln(&self.src, name_token.loc.ln)
-                        .build(),
-                )
+                .ctx(ErrorContext::span(
+                    SourcePoint::new(name_token.span.start.ln, name_token.span.start.col),
+                    SourcePoint::new(name_token.span.start.ln, name_token.span.end.col),
+                    self.src.clone(),
+                ))
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
                 .msg("variable requires type or default value"));
         }
 
-        self.expect(SimplePunctuation(Semicolon))?;
+        self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
 
         return Ok(VariableDeclarationNode {
             name: name_token.value.unwrap(),
@@ -105,7 +105,7 @@ impl Parser<'_> {
     }
 
     fn parse_if_statement(&mut self) -> Result<IfNode, SyntaxError> {
-        self.expect(Keyword(If))?;
+        self.expect(Tokens::Keyword(Keywords::If))?;
         self.advance();
 
         let cond = self.parse_expression()?;
@@ -114,10 +114,10 @@ impl Parser<'_> {
         self.advance();
 
         let mut r#else = None;
-        if self.current().kind == Keyword(Else) {
+        if self.current().kind == Tokens::Keyword(Keywords::Else) {
             self.advance();
 
-            if self.current().kind == Keyword(If) {
+            if self.current().kind == Tokens::Keyword(Keywords::If) {
                 let else_if = self.parse_if_statement()?;
                 r#else = Some(Box::new(else_if));
             } else {
@@ -136,7 +136,7 @@ impl Parser<'_> {
     }
 
     fn parse_while_loop(&mut self) -> Result<WhileLoopNode, SyntaxError> {
-        self.expect(Keyword(While))?;
+        self.expect(Tokens::Keyword(Keywords::While))?;
         self.advance();
 
         let cond = self.parse_expression()?;
@@ -145,10 +145,10 @@ impl Parser<'_> {
         self.advance();
 
         let mut r#else = None;
-        if self.current().kind == Keyword(Else) {
+        if self.current().kind == Tokens::Keyword(Keywords::Else) {
             self.advance();
 
-            if self.current().kind == Keyword(While) {
+            if self.current().kind == Tokens::Keyword(Keywords::While) {
                 let else_while = self.parse_while_loop()?;
                 r#else = Some(Box::new(else_while));
             } else {

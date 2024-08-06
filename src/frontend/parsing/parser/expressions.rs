@@ -1,29 +1,30 @@
 use crate::{
     errors::{
-        context::ErrorContextBuilder,
+        context::ErrorContext,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
     frontend::{
-        lexing::{ComplexPunctuationKind::*, SimplePunctuationKind::*, TokenKind::*},
+        lexing::{Punctuations, Tokens},
         parsing::ast::expressions::{
             BinaryExpressionKind, ExpressionKind, ExpressionNode, ResolutionExpressionKind,
             UnaryExpressionKind,
         },
     },
+    source::SourcePoint,
 };
 
 use super::Parser;
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
     pub(super) fn parse_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
         let token = self.current();
-        if token.kind == EOF {
+        if token.kind == Tokens::EOF {
             return Err(SyntaxError::default()
-                .ctx(
-                    ErrorContextBuilder::col(token.loc.start_col)
-                        .from_src_and_ln(&self.src, token.loc.ln)
-                        .build(),
-                )
+                .ctx(ErrorContext::point(
+                    token.span.start.ln,
+                    token.span.start.col,
+                    self.src.clone(),
+                ))
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Expression)));
         }
 
@@ -33,7 +34,7 @@ impl Parser<'_> {
     fn parse_assignment_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
         let mut left = self.parse_binary_expression(BinaryExpressionKind::lowest())?;
 
-        if let ComplexPunctuation(Assignment(kind)) = self.current().kind {
+        if let Tokens::Punctuation(Punctuations::Assignment(kind)) = self.current().kind {
             self.advance();
             let right = self.parse_assignment_expression()?;
 
@@ -55,8 +56,11 @@ impl Parser<'_> {
     ) -> Result<ExpressionNode, SyntaxError> {
         let mut expr = self.parse_binary_expression_operand(&bin_kind)?;
 
-        while let ComplexPunctuation(punct_kind) = self.current().kind {
-            if matches!(punct_kind, Assignment(_) | InlineBody) {
+        while let Tokens::Punctuation(punct_kind) = self.current().kind {
+            if matches!(
+                punct_kind,
+                Punctuations::Assignment(_) | Punctuations::InlineBody
+            ) {
                 break;
             }
 
@@ -64,11 +68,11 @@ impl Parser<'_> {
 
             let Ok(punct_bin_kind) = BinaryExpressionKind::from_punct(&punct_kind) else {
                 return Err(SyntaxError::default()
-                    .ctx(
-                        ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
-                            .from_src_and_ln(&self.src, token.loc.ln)
-                            .build(),
-                    )
+                    .ctx(ErrorContext::point(
+                        token.span.start.ln,
+                        token.span.start.col,
+                        self.src.clone(),
+                    ))
                     .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
                     .msg("specified token is not a binary operator"));
             };
@@ -111,7 +115,7 @@ impl Parser<'_> {
     fn parse_call_or_resolution_expression(&mut self) -> Result<ExpressionNode, SyntaxError> {
         let res = self.parse_resolution_expression()?;
 
-        if self.current().kind == SimplePunctuation(ParenOpen) {
+        if self.current().kind == Tokens::Punctuation(Punctuations::ParenOpen) {
             return Ok(self.parse_call_expression(res)?);
         }
 
@@ -132,7 +136,7 @@ impl Parser<'_> {
         };
 
         self.advance();
-        if self.current().kind == SimplePunctuation(ParenOpen) {
+        if self.current().kind == Tokens::Punctuation(Punctuations::ParenOpen) {
             expr = self.parse_call_expression(expr)?;
         }
 
@@ -140,24 +144,27 @@ impl Parser<'_> {
     }
 
     fn parse_call_arguments(&mut self) -> Result<Vec<ExpressionNode>, SyntaxError> {
-        self.expect(SimplePunctuation(ParenOpen))?;
+        self.expect(Tokens::Punctuation(Punctuations::ParenOpen))?;
         let mut args = Vec::new();
 
         loop {
             self.advance();
-            if matches!(self.current().kind, SimplePunctuation(ParenClose) | EOF) {
+            if matches!(
+                self.current().kind,
+                Tokens::Punctuation(Punctuations::ParenClose) | Tokens::EOF
+            ) {
                 break;
             }
 
             let expr = self.parse_expression()?;
             args.push(expr);
 
-            if self.current().kind != SimplePunctuation(Comma) {
+            if self.current().kind != Tokens::Punctuation(Punctuations::Comma) {
                 break;
             }
         }
 
-        self.expect(SimplePunctuation(ParenClose))?;
+        self.expect(Tokens::Punctuation(Punctuations::ParenClose))?;
         return Ok(args);
     }
 
@@ -169,14 +176,19 @@ impl Parser<'_> {
 
             if !matches!(
                 self.current().kind,
-                ComplexPunctuation(MemberSeparator) | ComplexPunctuation(NamespaceSeparator)
+                Tokens::Punctuation(Punctuations::MemberSeparator)
+                    | Tokens::Punctuation(Punctuations::NamespaceSeparator)
             ) {
                 break;
             }
 
             let kind = match self.current().kind {
-                ComplexPunctuation(MemberSeparator) => ResolutionExpressionKind::Member,
-                ComplexPunctuation(NamespaceSeparator) => ResolutionExpressionKind::Namespace,
+                Tokens::Punctuation(Punctuations::MemberSeparator) => {
+                    ResolutionExpressionKind::Member
+                }
+                Tokens::Punctuation(Punctuations::NamespaceSeparator) => {
+                    ResolutionExpressionKind::Namespace
+                }
                 _ => unreachable!(),
             };
 
@@ -199,26 +211,34 @@ impl Parser<'_> {
         let token = self.current();
 
         match token.kind {
-            Identifier => Ok(ExpressionNode {
+            Tokens::Identifier => Ok(ExpressionNode {
                 kind: ExpressionKind::Identifier {
                     name: token.value.unwrap(),
                 },
             }),
-            Literal(lit) => Ok(ExpressionNode {
+            Tokens::Literal(lit) => Ok(ExpressionNode {
                 kind: ExpressionKind::Literal {
                     kind: lit,
                     value: token.value.unwrap(),
                 },
             }),
 
-            ComplexPunctuation(punct_kind) => {
+            Tokens::Punctuation(punct_kind) => {
+                if punct_kind == Punctuations::ParenOpen {
+                    self.advance();
+                    let expr = self.parse_expression()?;
+                    self.expect(Tokens::Punctuation(Punctuations::ParenClose))?;
+
+                    return Ok(expr);
+                }
+
                 let Ok(un_kind) = UnaryExpressionKind::from_punct(&punct_kind) else {
                     return Err(SyntaxError::default()
-                        .ctx(
-                            ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
-                                .from_src_and_ln(&self.src, token.loc.ln)
-                                .build(),
-                        )
+                        .ctx(ErrorContext::span(
+                            SourcePoint::new(token.span.start.ln, token.span.start.col),
+                            SourcePoint::new(token.span.start.ln, token.span.end.col),
+                            self.src.clone(),
+                        ))
                         .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
                         .msg("specified token is not a unary operator"));
                 };
@@ -234,20 +254,13 @@ impl Parser<'_> {
                     },
                 })
             }
-            SimplePunctuation(ParenOpen) => {
-                self.advance();
-                let expr = self.parse_expression()?;
-                self.expect(SimplePunctuation(ParenClose))?;
-
-                Ok(expr)
-            }
 
             _ => Err(SyntaxError::default()
-                .ctx(
-                    ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
-                        .from_src_and_ln(&self.src, token.loc.ln)
-                        .build(),
-                )
+                .ctx(ErrorContext::span(
+                    SourcePoint::new(token.span.start.ln, token.span.start.col),
+                    SourcePoint::new(token.span.start.ln, token.span.end.col),
+                    self.src.clone(),
+                ))
                 .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token))
                 .msg("specified token cannot be used for expressions")),
         }

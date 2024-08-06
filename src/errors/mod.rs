@@ -1,6 +1,7 @@
 use std::process;
 
 pub mod command_line;
+pub mod compiler;
 pub mod context;
 pub mod syntax;
 

@@ -1,25 +1,23 @@
 use crate::{
     errors::{
-        context::ErrorContextBuilder,
+        context::ErrorContext,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
     frontend::{
-        lexing::{
-            AssignmentKind::*, ComplexPunctuationKind::*, KeywordKind::*, SimplePunctuationKind::*,
-            TokenKind::*,
-        },
+        lexing::{Assignments, Keywords, Punctuations, Tokens},
         parsing::ast::functions::{ArgumentNode, FunctionNode},
     },
+    source::SourcePoint,
 };
 
 use super::Parser;
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
     pub(super) fn parse_function(&mut self) -> Result<FunctionNode, SyntaxError> {
-        self.expect(Keyword(Func))?;
+        self.expect(Tokens::Keyword(Keywords::Func))?;
 
         self.advance();
-        let name_token = self.expect(Identifier)?;
+        let name_token = self.expect(Tokens::Identifier)?;
 
         self.advance();
         let args = self.parse_function_arguments()?;
@@ -28,12 +26,12 @@ impl Parser<'_> {
         let mut r#type = None;
         let mut return_var = None;
 
-        if self.current().kind == ComplexPunctuation(ReturnSeparator) {
+        if self.current().kind == Tokens::Punctuation(Punctuations::ReturnSeparator) {
             self.advance();
             r#type = Some(self.parse_type()?);
 
             self.advance();
-            if self.current().kind == ComplexPunctuation(Colon) {
+            if self.current().kind == Tokens::Punctuation(Punctuations::Colon) {
                 return_var = Some(r#type.unwrap().raw);
 
                 self.advance();
@@ -55,21 +53,24 @@ impl Parser<'_> {
     }
 
     fn parse_function_arguments(&mut self) -> Result<Vec<ArgumentNode>, SyntaxError> {
-        self.expect(SimplePunctuation(ParenOpen))?;
+        self.expect(Tokens::Punctuation(Punctuations::ParenOpen))?;
         let mut args = Vec::new();
 
         loop {
             self.advance();
-            if matches!(self.current().kind, SimplePunctuation(ParenClose) | EOF) {
+            if matches!(
+                self.current().kind,
+                Tokens::Punctuation(Punctuations::ParenClose) | Tokens::EOF
+            ) {
                 break;
             }
 
-            let name_token = self.expect(Identifier)?;
+            let name_token = self.expect(Tokens::Identifier)?;
 
             self.advance();
             let mut r#type = None;
 
-            if self.current().kind == ComplexPunctuation(Colon) {
+            if self.current().kind == Tokens::Punctuation(Punctuations::Colon) {
                 self.advance();
                 r#type = Some(self.parse_type()?);
 
@@ -78,18 +79,20 @@ impl Parser<'_> {
 
             let mut value = None;
 
-            if self.current().kind == ComplexPunctuation(Assignment(Straight)) {
+            if self.current().kind
+                == Tokens::Punctuation(Punctuations::Assignment(Assignments::Straight))
+            {
                 self.advance();
                 value = Some(self.parse_expression()?);
             }
 
             if r#type == None && value == None {
                 return Err(SyntaxError::default()
-                    .ctx(
-                        ErrorContextBuilder::span(name_token.loc.start_col, name_token.loc.end_col)
-                            .from_src_and_ln(&self.src, name_token.loc.ln)
-                            .build(),
-                    )
+                    .ctx(ErrorContext::span(
+                        SourcePoint::new(name_token.span.start.ln, name_token.span.start.col),
+                        SourcePoint::new(name_token.span.start.ln, name_token.span.end.col),
+                        self.src.clone(),
+                    ))
                     .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
                     .msg("argument requires type or default value"));
             }
@@ -100,12 +103,12 @@ impl Parser<'_> {
                 default: value,
             });
 
-            if self.current().kind != SimplePunctuation(Comma) {
+            if self.current().kind != Tokens::Punctuation(Punctuations::Comma) {
                 break;
             }
         }
 
-        self.expect(SimplePunctuation(ParenClose))?;
+        self.expect(Tokens::Punctuation(Punctuations::ParenClose))?;
         return Ok(args);
     }
 }

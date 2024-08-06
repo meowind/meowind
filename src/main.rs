@@ -1,22 +1,25 @@
 #![feature(let_chains)]
-#[allow(unused)]
 pub mod errors;
 pub mod frontend;
-pub mod structs;
+pub mod source;
+pub mod translation;
 pub mod utils;
 
 use std::time::Instant;
 
+use cranelift::prelude::{settings, Configurable};
+use cranelift_jit::{JITBuilder, JITModule};
 use errors::ErrorList;
 use frontend::{
     lexing::Token,
     parsing::{ast::projects::ProjectNode, Parser},
 };
+use translation::cranelift::Translator;
 
 use crate::{
     errors::command_line::{CommandLineError, CommandLineErrorKind},
     frontend::lexing::Lexer,
-    structs::{MeowindArguments, ScriptSource},
+    source::SourceFile,
     utils::colors::*,
 };
 use std::{env, fs, io::ErrorKind, path::PathBuf, process};
@@ -30,7 +33,7 @@ fn main() {
     let args = parse_arguments();
 
     let source_contents = read_source_contents(&args.path);
-    let source = ScriptSource::new(args.path.clone(), &source_contents);
+    let source = SourceFile::new(args.path.clone(), &source_contents);
 
     println!(
         "{GREEN}{BOLD}compiling{WHITE} {}{RESET}",
@@ -43,6 +46,8 @@ fn main() {
 
     #[allow(unused)]
     let ast = run_parser(&tokens, source.clone());
+
+    translate(&ast);
 
     let comp_micros = comp_start.elapsed().as_micros();
     let comp_millis = comp_start.elapsed().as_millis();
@@ -57,7 +62,7 @@ fn main() {
     process::exit(0);
 }
 
-fn run_lexer(source: ScriptSource) -> Vec<Token> {
+fn run_lexer(source: SourceFile) -> Vec<Token> {
     #[cfg(debug_assertions)]
     let lexer_start = Instant::now();
     let lexer = Lexer::tokenize(source);
@@ -87,7 +92,7 @@ fn run_lexer(source: ScriptSource) -> Vec<Token> {
     return lexer.tokens;
 }
 
-fn run_parser(tokens: &Vec<Token>, source: ScriptSource) -> ProjectNode {
+fn run_parser(tokens: &Vec<Token>, source: SourceFile) -> ProjectNode {
     #[cfg(debug_assertions)]
     let parser_start = Instant::now();
     let parser = Parser::parse(tokens, source);
@@ -109,7 +114,41 @@ fn run_parser(tokens: &Vec<Token>, source: ScriptSource) -> ProjectNode {
     return parser.project;
 }
 
-fn parse_arguments() -> MeowindArguments {
+fn translate(ast: &ProjectNode) {
+    #[cfg(debug_assertions)]
+    let translator_start = Instant::now();
+
+    let mut flag_builder = settings::builder();
+    flag_builder.set("use_colocated_libcalls", "false").unwrap();
+    flag_builder.set("is_pic", "false").unwrap();
+    let isa_builder = cranelift_native::builder().unwrap_or_else(|msg| {
+        panic!("host machine is not supported: {}", msg);
+    });
+    let isa = isa_builder
+        .finish(settings::Flags::new(flag_builder))
+        .unwrap();
+    let builder = JITBuilder::with_isa(isa, cranelift_module::default_libcall_names());
+
+    let module = JITModule::new(builder);
+    let mut translator = Translator::translate(module, ast);
+
+    translator.errors.throw_if_there();
+    translator.module.finalize_definitions().unwrap();
+
+    #[cfg(debug_assertions)]
+    let translator_micros = translator_start.elapsed().as_micros();
+    #[cfg(debug_assertions)]
+    let translator_millis = translator_start.elapsed().as_millis();
+
+    log!(
+        "translator output:\n{}\ntranslator finished in: {}us or {}ms",
+        translator.ctx.func,
+        translator_micros,
+        translator_millis
+    );
+}
+
+fn parse_arguments() -> CompilerArguments {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
@@ -126,7 +165,7 @@ fn parse_arguments() -> MeowindArguments {
         ));
     }
 
-    MeowindArguments {
+    CompilerArguments {
         path: PathBuf::from(&args[1]),
     }
 }
@@ -164,4 +203,8 @@ fn read_source_contents(path: &PathBuf) -> String {
     };
 
     return source_contents;
+}
+
+pub struct CompilerArguments {
+    pub path: PathBuf,
 }

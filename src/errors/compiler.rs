@@ -1,16 +1,16 @@
-use crate::utils::colors::*;
 use std::fmt;
 
 use super::{context::ErrorContext, MeowindError};
+use crate::utils::colors::*;
 
 #[derive(Clone)]
-pub struct SyntaxError<'a> {
-    kind: Option<SyntaxErrorKind>,
+pub struct CompilerError<'a> {
+    kind: Option<CompilerErrorKind>,
     msg: Option<String>,
     ctx: Option<ErrorContext<'a>>,
 }
 
-impl Default for SyntaxError<'_> {
+impl Default for CompilerError<'_> {
     fn default() -> Self {
         Self {
             kind: None,
@@ -20,8 +20,8 @@ impl Default for SyntaxError<'_> {
     }
 }
 
-impl<'a> SyntaxError<'a> {
-    pub fn kind(&self, kind: SyntaxErrorKind) -> Self {
+impl<'a> CompilerError<'a> {
+    pub fn kind(&self, kind: CompilerErrorKind) -> Self {
         Self {
             kind: Some(kind),
             ..self.clone()
@@ -43,9 +43,9 @@ impl<'a> SyntaxError<'a> {
     }
 }
 
-impl MeowindError for SyntaxError<'_> {
+impl MeowindError for CompilerError<'_> {
     fn to_string(&self) -> String {
-        let mut error_body = format!("{RED}{BOLD}syntax error{RESET}");
+        let mut error_body = format!("{RED}{BOLD}compiler error{RESET}");
 
         if let Some(kind) = &self.kind {
             error_body += format!(": {kind}").as_str();
@@ -64,37 +64,16 @@ impl MeowindError for SyntaxError<'_> {
 }
 
 #[derive(Clone)]
-pub enum SyntaxErrorKind {
-    Expected(SyntaxErrorSource),
-    Unexpected(SyntaxErrorSource),
-    Invalid(SyntaxErrorSource),
+pub enum CompilerErrorKind {
+    Undeclared,
+    AlreadyDeclared,
 }
 
-#[derive(Debug, Clone)]
-pub enum SyntaxErrorSource {
-    Character,
-    Token,
-    Expression,
-}
-
-impl ToString for SyntaxErrorSource {
-    fn to_string(&self) -> String {
-        return format!("{:?}", self);
-    }
-}
-
-impl fmt::Display for SyntaxErrorKind {
+impl fmt::Display for CompilerErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let text = match self {
-            Self::Expected(source) => {
-                format!("expected {}", source.to_string().to_lowercase())
-            }
-            Self::Unexpected(source) => {
-                format!("unexpected {}", source.to_string().to_lowercase())
-            }
-            Self::Invalid(source) => {
-                format!("invalid {}", source.to_string().to_lowercase())
-            }
+            Self::Undeclared => "undeclared",
+            Self::AlreadyDeclared => "already declared",
         };
 
         write!(f, "{text}")
