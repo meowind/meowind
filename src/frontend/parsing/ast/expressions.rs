@@ -1,6 +1,6 @@
 use std::isize;
 
-use crate::frontend::lexing::{Assignments, Literals, Punctuations};
+use crate::frontend::lexing::{AssignmentKind, ComplexPunctuationKind, LiteralKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionNode {
@@ -10,7 +10,7 @@ pub struct ExpressionNode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
     Literal {
-        kind: Literals,
+        kind: LiteralKind,
         value: String,
     },
 
@@ -32,19 +32,19 @@ pub enum ExpressionKind {
     Binary {
         kind: BinaryExpressionKind,
         left: Box<ExpressionNode>,
-        op: Punctuations,
+        op: ComplexPunctuationKind,
         right: Box<ExpressionNode>,
     },
 
     Unary {
         kind: UnaryExpressionKind,
-        op: Punctuations,
+        op: ComplexPunctuationKind,
         right: Box<ExpressionNode>,
     },
 
     Assignment {
         left: Box<ExpressionNode>,
-        op: Assignments,
+        op: AssignmentKind,
         right: Box<ExpressionNode>,
     },
 }
@@ -56,10 +56,10 @@ pub enum UnaryExpressionKind {
 }
 
 impl UnaryExpressionKind {
-    pub fn from_punct(opr: &Punctuations) -> Result<UnaryExpressionKind, ()> {
+    pub fn from_punct(opr: &ComplexPunctuationKind) -> Result<UnaryExpressionKind, ()> {
         match opr {
-            Punctuations::OperatorMinus => Ok(UnaryExpressionKind::ArithmeticNegation),
-            Punctuations::OperatorNot => Ok(UnaryExpressionKind::LogicalNegation),
+            ComplexPunctuationKind::OperatorMinus => Ok(UnaryExpressionKind::ArithmeticNegation),
+            ComplexPunctuationKind::OperatorNot => Ok(UnaryExpressionKind::LogicalNegation),
             _ => Err(()),
         }
     }
@@ -77,28 +77,28 @@ pub enum BinaryExpressionKind {
 }
 
 impl BinaryExpressionKind {
-    pub fn from_punct(opr: &Punctuations) -> Result<BinaryExpressionKind, ()> {
+    pub fn from_punct(opr: &ComplexPunctuationKind) -> Result<BinaryExpressionKind, ()> {
         match opr {
-            Punctuations::OperatorAnd => Ok(BinaryExpressionKind::LogicalAnd),
+            ComplexPunctuationKind::OperatorAnd => Ok(BinaryExpressionKind::LogicalAnd),
 
-            Punctuations::OperatorOr => Ok(BinaryExpressionKind::LogicalOr),
+            ComplexPunctuationKind::OperatorOr => Ok(BinaryExpressionKind::LogicalOr),
 
-            Punctuations::OperatorEqual => Ok(BinaryExpressionKind::Equality),
-            Punctuations::OperatorNotEqual => Ok(BinaryExpressionKind::Equality),
+            ComplexPunctuationKind::OperatorEqual => Ok(BinaryExpressionKind::Equality),
+            ComplexPunctuationKind::OperatorNotEqual => Ok(BinaryExpressionKind::Equality),
 
-            Punctuations::AngleOpen => Ok(BinaryExpressionKind::Relational),
-            Punctuations::AngleClose => Ok(BinaryExpressionKind::Relational),
-            Punctuations::OperatorLessEqual => Ok(BinaryExpressionKind::Relational),
-            Punctuations::OperatorGreaterEqual => Ok(BinaryExpressionKind::Relational),
+            ComplexPunctuationKind::AngleOpen => Ok(BinaryExpressionKind::Relational),
+            ComplexPunctuationKind::AngleClose => Ok(BinaryExpressionKind::Relational),
+            ComplexPunctuationKind::OperatorLessEqual => Ok(BinaryExpressionKind::Relational),
+            ComplexPunctuationKind::OperatorGreaterEqual => Ok(BinaryExpressionKind::Relational),
 
-            Punctuations::OperatorPlus => Ok(BinaryExpressionKind::Additive),
-            Punctuations::OperatorMinus => Ok(BinaryExpressionKind::Additive),
+            ComplexPunctuationKind::OperatorPlus => Ok(BinaryExpressionKind::Additive),
+            ComplexPunctuationKind::OperatorMinus => Ok(BinaryExpressionKind::Additive),
 
-            Punctuations::OperatorMultiply => Ok(BinaryExpressionKind::Multiplicative),
-            Punctuations::OperatorDivide => Ok(BinaryExpressionKind::Multiplicative),
-            Punctuations::OperatorModulo => Ok(BinaryExpressionKind::Multiplicative),
+            ComplexPunctuationKind::OperatorMultiply => Ok(BinaryExpressionKind::Multiplicative),
+            ComplexPunctuationKind::OperatorDivide => Ok(BinaryExpressionKind::Multiplicative),
+            ComplexPunctuationKind::OperatorModulo => Ok(BinaryExpressionKind::Multiplicative),
 
-            Punctuations::OperatorPower => Ok(BinaryExpressionKind::Exponential),
+            ComplexPunctuationKind::OperatorPower => Ok(BinaryExpressionKind::Exponential),
 
             _ => Err(()),
         }

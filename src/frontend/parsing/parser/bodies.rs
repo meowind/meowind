@@ -1,23 +1,23 @@
 use crate::{
     errors::syntax::SyntaxError,
     frontend::{
-        lexing::{Punctuations, Tokens},
+        lexing::{ComplexPunctuationKind::*, SimplePunctuationKind::*, TokenKind::*},
         parsing::ast::bodies::{BodyElementKind, BodyElementNode, BodyKind, BodyNode},
     },
 };
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_body(&mut self) -> Result<BodyNode, SyntaxError> {
         let token = self.expect_multiple(vec![
-            Tokens::Punctuation(Punctuations::BraceOpen),
-            Tokens::Punctuation(Punctuations::InlineBody),
+            SimplePunctuation(BraceOpen),
+            ComplexPunctuation(InlineBody),
         ])?;
 
         let body = match token.kind {
-            Tokens::Punctuation(Punctuations::BraceOpen) => self.parse_multiline_body()?,
-            Tokens::Punctuation(Punctuations::InlineBody) => self.parse_inline_body()?,
+            SimplePunctuation(BraceOpen) => self.parse_multiline_body()?,
+            ComplexPunctuation(InlineBody) => self.parse_inline_body()?,
             _ => unreachable!(),
         };
 
@@ -25,17 +25,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_multiline_body(&mut self) -> Result<BodyNode, SyntaxError> {
-        self.expect(Tokens::Punctuation(Punctuations::BraceOpen))?;
+        self.expect(SimplePunctuation(BraceOpen))?;
         let mut els: Vec<BodyElementNode> = Vec::new();
 
         loop {
             self.advance();
             let token = self.current();
 
-            if matches!(
-                token.kind,
-                Tokens::Punctuation(Punctuations::BraceClose) | Tokens::EOF
-            ) {
+            if matches!(token.kind, SimplePunctuation(BraceClose) | EOF) {
                 break;
             }
 
@@ -43,7 +40,7 @@ impl<'a> Parser<'a> {
             els.push(el);
         }
 
-        self.expect(Tokens::Punctuation(Punctuations::BraceClose))?;
+        self.expect(SimplePunctuation(BraceClose))?;
 
         Ok(BodyNode {
             kind: BodyKind::Multiline(els),
@@ -51,7 +48,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_inline_body(&mut self) -> Result<BodyNode, SyntaxError> {
-        self.expect(Tokens::Punctuation(Punctuations::InlineBody))?;
+        self.expect(ComplexPunctuation(InlineBody))?;
 
         self.advance();
         let el = self.parse_body_element()?;
@@ -64,13 +61,13 @@ impl<'a> Parser<'a> {
     fn parse_body_element(&mut self) -> Result<BodyElementNode, SyntaxError> {
         let token = self.current();
 
-        if token.kind == Tokens::Punctuation(Punctuations::Semicolon) {
+        if token.kind == SimplePunctuation(Semicolon) {
             return Ok(BodyElementNode {
                 kind: BodyElementKind::Empty,
             });
         }
 
-        if token.kind == Tokens::Punctuation(Punctuations::BraceOpen) {
+        if token.kind == SimplePunctuation(BraceOpen) {
             let body = self.parse_multiline_body()?;
 
             return Ok(BodyElementNode {

@@ -1,37 +1,39 @@
 use crate::{
     errors::{
-        context::ErrorContext,
+        context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
     frontend::{
-        lexing::{Assignments, Keywords, Punctuations, Tokens},
+        lexing::{
+            AssignmentKind::*, ComplexPunctuationKind::*, KeywordKind::*, SimplePunctuationKind::*,
+            TokenKind::*,
+        },
         parsing::ast::items::{ConstantNode, ItemKind, ItemNode, StaticNode},
     },
-    source::SourcePoint,
 };
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_item(&mut self) -> Result<ItemNode, SyntaxError> {
         let mut public = false;
-        if self.current().kind == Tokens::Keyword(Keywords::Pub) {
+        if self.current().kind == Keyword(Pub) {
             public = true;
             self.advance();
         }
 
         let token = self.current();
         let kind = match token.kind {
-            Tokens::Keyword(Keywords::Const) => ItemKind::Constant(self.parse_const()?),
-            Tokens::Keyword(Keywords::Static) => ItemKind::Static(self.parse_static()?),
-            Tokens::Keyword(Keywords::Func) => ItemKind::Function(self.parse_function()?),
+            Keyword(Const) => ItemKind::Constant(self.parse_const()?),
+            Keyword(Static) => ItemKind::Static(self.parse_static()?),
+            Keyword(Func) => ItemKind::Function(self.parse_function()?),
             _ => {
                 return Err(SyntaxError::default()
-                    .ctx(ErrorContext::span(
-                        SourcePoint::new(token.span.start.ln, token.span.start.col),
-                        SourcePoint::new(token.span.start.ln, token.span.end.col),
-                        self.src.clone(),
-                    ))
+                    .ctx(
+                        ErrorContextBuilder::span(token.loc.start_col, token.loc.end_col)
+                            .from_src_and_ln(&self.src, token.loc.ln)
+                            .build(),
+                    )
                     .kind(SyntaxErrorKind::Unexpected(SyntaxErrorSource::Token)));
             }
         };
@@ -40,26 +42,24 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_const(&mut self) -> Result<ConstantNode, SyntaxError> {
-        self.expect(Tokens::Keyword(Keywords::Const))?;
+        self.expect(Keyword(Const))?;
 
         self.advance();
-        let name_token = self.expect(Tokens::Identifier)?;
+        let name_token = self.expect(Identifier)?;
 
         self.advance();
-        self.expect(Tokens::Punctuation(Punctuations::Colon))?;
+        self.expect(ComplexPunctuation(Colon))?;
 
         self.advance();
         let r#type = self.parse_type()?;
 
         self.advance();
-        self.expect(Tokens::Punctuation(Punctuations::Assignment(
-            Assignments::Straight,
-        )))?;
+        self.expect(ComplexPunctuation(Assignment(Straight)))?;
 
         self.advance();
         let expression = self.parse_expression()?;
 
-        self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
+        self.expect(SimplePunctuation(Semicolon))?;
 
         return Ok(ConstantNode {
             name: name_token.value.unwrap(),
@@ -69,35 +69,33 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_static(&mut self) -> Result<StaticNode, SyntaxError> {
-        self.expect(Tokens::Keyword(Keywords::Static))?;
+        self.expect(Keyword(Static))?;
         self.advance();
 
         let mut mutable = false;
-        if self.current().kind == Tokens::Keyword(Keywords::Mut) {
+        if self.current().kind == Keyword(Mut) {
             mutable = true;
             self.advance();
         }
 
-        let name_token = self.expect(Tokens::Identifier)?;
+        let name_token = self.expect(Identifier)?;
 
         self.advance();
         let mut r#type = None;
 
-        if self.current().kind == Tokens::Punctuation(Punctuations::Colon) {
+        if self.current().kind == ComplexPunctuation(Colon) {
             self.advance();
             r#type = Some(self.parse_type()?);
 
             self.advance();
         }
 
-        self.expect(Tokens::Punctuation(Punctuations::Assignment(
-            Assignments::Straight,
-        )))?;
+        self.expect(ComplexPunctuation(Assignment(Straight)))?;
 
         self.advance();
         let expression = self.parse_expression()?;
 
-        self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
+        self.expect(SimplePunctuation(Semicolon))?;
 
         return Ok(StaticNode {
             name: name_token.value.unwrap(),

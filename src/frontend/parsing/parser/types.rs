@@ -1,6 +1,6 @@
 use crate::{
     errors::syntax::SyntaxError,
-    frontend::{lexing::Tokens::*, parsing::ast::types::TypeNode},
+    frontend::{lexing::TokenKind::*, parsing::ast::types::TypeNode},
 };
 
 use super::Parser;

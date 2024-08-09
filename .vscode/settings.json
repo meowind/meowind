@@ -1,0 +1,27 @@
+{
+    "cSpell.words": [
+        "appender",
+        "canonicalize",
+        "codegen",
+        "colocated",
+        "cranelift",
+        "libcall",
+        "libcalls",
+        "meowind",
+        "middlend",
+        "nanos",
+        "paren",
+        "punct",
+        "puncts",
+        "winapi"
+    ],
+    "editor.semanticTokenColorCustomizations": {
+        "enabled": true,
+        "rules": {
+            "*.mutable": {
+                "underline": false,
+            }
+        }
+    },
+    "cSpell.language": "en,ru"
+}

@@ -1,49 +1,51 @@
 use crate::{
     errors::{
-        context::ErrorContext,
+        context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
     frontend::{
-        lexing::{Assignments, Keywords, Punctuations, Tokens},
+        lexing::{
+            AssignmentKind::*, ComplexPunctuationKind::*, KeywordKind::*, SimplePunctuationKind::*,
+            TokenKind::*,
+        },
         parsing::ast::statements::{
             IfKind, IfNode, StatementKind, StatementNode, VariableDeclarationNode, WhileLoopKind,
             WhileLoopNode,
         },
     },
-    source::SourcePoint,
 };
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_statement(&mut self) -> Result<StatementNode, SyntaxError> {
         let stmt = match self.current().kind {
-            Tokens::Keyword(Keywords::Var) => {
+            Keyword(Var) => {
                 let var = self.parse_variable_declaration()?;
                 StatementKind::VariableDeclaration(var)
             }
-            Tokens::Keyword(Keywords::Func) => {
+            Keyword(Func) => {
                 let func = self.parse_function()?;
                 StatementKind::FunctionDeclaration(func)
             }
-            Tokens::Keyword(Keywords::Return) => {
+            Keyword(Return) => {
                 self.advance();
                 let expr = self.parse_expression()?;
-                self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
+                self.expect(SimplePunctuation(Semicolon))?;
 
                 StatementKind::Return(expr)
             }
-            Tokens::Keyword(Keywords::If) => {
+            Keyword(If) => {
                 let if_stmt = self.parse_if_statement()?;
                 StatementKind::If(if_stmt)
             }
-            Tokens::Keyword(Keywords::While) => {
+            Keyword(While) => {
                 let while_loop = self.parse_while_loop()?;
                 StatementKind::WhileLoop(while_loop)
             }
             _ => {
                 let expr = self.parse_expression()?;
-                self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
+                self.expect(SimplePunctuation(Semicolon))?;
 
                 StatementKind::Expression(expr)
             }
@@ -53,21 +55,21 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<VariableDeclarationNode, SyntaxError> {
-        self.expect(Tokens::Keyword(Keywords::Var))?;
+        self.expect(Keyword(Var))?;
         self.advance();
 
         let mut mutable = false;
-        if self.current().kind == Tokens::Keyword(Keywords::Mut) {
+        if self.current().kind == Keyword(Mut) {
             mutable = true;
             self.advance();
         }
 
-        let name_token = self.expect(Tokens::Identifier)?;
+        let name_token = self.expect(Identifier)?;
 
         self.advance();
         let mut r#type = None;
 
-        if self.current().kind == Tokens::Punctuation(Punctuations::Colon) {
+        if self.current().kind == ComplexPunctuation(Colon) {
             self.advance();
             r#type = Some(self.parse_type()?);
 
@@ -76,25 +78,23 @@ impl<'a> Parser<'a> {
 
         let mut value = None;
 
-        if self.current().kind
-            == Tokens::Punctuation(Punctuations::Assignment(Assignments::Straight))
-        {
+        if self.current().kind == ComplexPunctuation(Assignment(Straight)) {
             self.advance();
             value = Some(self.parse_expression()?);
         }
 
         if r#type == None && value == None {
             return Err(SyntaxError::default()
-                .ctx(ErrorContext::span(
-                    SourcePoint::new(name_token.span.start.ln, name_token.span.start.col),
-                    SourcePoint::new(name_token.span.start.ln, name_token.span.end.col),
-                    self.src.clone(),
-                ))
+                .ctx(
+                    ErrorContextBuilder::span(name_token.loc.start_col, name_token.loc.end_col)
+                        .from_src_and_ln(&self.src, name_token.loc.ln)
+                        .build(),
+                )
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
                 .msg("variable requires type or default value"));
         }
 
-        self.expect(Tokens::Punctuation(Punctuations::Semicolon))?;
+        self.expect(SimplePunctuation(Semicolon))?;
 
         return Ok(VariableDeclarationNode {
             name: name_token.value.unwrap(),
@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_if_statement(&mut self) -> Result<IfNode, SyntaxError> {
-        self.expect(Tokens::Keyword(Keywords::If))?;
+        self.expect(Keyword(If))?;
         self.advance();
 
         let cond = self.parse_expression()?;
@@ -114,10 +114,10 @@ impl<'a> Parser<'a> {
         self.advance();
 
         let mut r#else = None;
-        if self.current().kind == Tokens::Keyword(Keywords::Else) {
+        if self.current().kind == Keyword(Else) {
             self.advance();
 
-            if self.current().kind == Tokens::Keyword(Keywords::If) {
+            if self.current().kind == Keyword(If) {
                 let else_if = self.parse_if_statement()?;
                 r#else = Some(Box::new(else_if));
             } else {
@@ -136,7 +136,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_while_loop(&mut self) -> Result<WhileLoopNode, SyntaxError> {
-        self.expect(Tokens::Keyword(Keywords::While))?;
+        self.expect(Keyword(While))?;
         self.advance();
 
         let cond = self.parse_expression()?;
@@ -145,10 +145,10 @@ impl<'a> Parser<'a> {
         self.advance();
 
         let mut r#else = None;
-        if self.current().kind == Tokens::Keyword(Keywords::Else) {
+        if self.current().kind == Keyword(Else) {
             self.advance();
 
-            if self.current().kind == Tokens::Keyword(Keywords::While) {
+            if self.current().kind == Keyword(While) {
                 let else_while = self.parse_while_loop()?;
                 r#else = Some(Box::new(else_while));
             } else {

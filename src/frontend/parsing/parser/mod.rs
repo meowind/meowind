@@ -7,26 +7,29 @@ pub mod types;
 
 use crate::{
     errors::{
-        context::ErrorContext,
+        context::ErrorContextBuilder,
         syntax::{SyntaxError, SyntaxErrorKind, SyntaxErrorSource},
     },
-    frontend::lexing::{Token, Tokens},
-    source::{SourceFile, SourcePoint},
+    frontend::lexing::{
+        Token,
+        TokenKind::{self, *},
+    },
+    structs::ScriptSource,
 };
 
 use super::ast::projects::ProjectNode;
 
 pub struct Parser<'a> {
     pub project: ProjectNode,
-    pub errors: Vec<SyntaxError<'a>>,
+    pub errors: Vec<SyntaxError>,
 
     tokens: &'a Vec<Token>,
-    src: SourceFile<'a>,
+    src: ScriptSource<'a>,
     cursor: usize,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a Vec<Token>, src: SourceFile<'a>) -> Parser<'a> {
+    pub fn new(tokens: &'a Vec<Token>, src: ScriptSource<'a>) -> Parser<'a> {
         Parser {
             tokens,
             src,
@@ -34,7 +37,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(tokens: &'a Vec<Token>, src: SourceFile<'a>) -> Parser<'a> {
+    pub fn parse(tokens: &'a Vec<Token>, src: ScriptSource<'a>) -> Parser<'a> {
         let mut parser = Parser::new(tokens, src);
         parser.process();
 
@@ -46,7 +49,7 @@ impl<'a> Parser<'a> {
             return;
         }
 
-        while self.current().kind != Tokens::EOF {
+        while self.current().kind != EOF {
             let result = self.parse_item();
             let Ok(item) = result else {
                 self.errors.push(result.unwrap_err());
@@ -74,18 +77,22 @@ impl<'a> Parser<'a> {
         self.cursor += 1;
     }
 
-    fn expect(&self, kind: Tokens) -> Result<Token, SyntaxError> {
+    fn expect(&mut self, kind: TokenKind) -> Result<Token, SyntaxError> {
         let token = self.current();
 
         if token.kind != kind {
             let (col, ln) = if let Ok(prev) = self.previous() {
-                (prev.span.end.col, prev.span.start.ln)
+                (prev.loc.end_col, prev.loc.ln)
             } else {
-                (token.span.start.col, token.span.start.ln)
+                (token.loc.start_col, token.loc.ln)
             };
 
             return Err(SyntaxError::default()
-                .ctx(ErrorContext::point(ln, col, self.src.clone()))
+                .ctx(
+                    ErrorContextBuilder::col(col)
+                        .from_src_and_ln(&self.src, ln)
+                        .build(),
+                )
                 .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
                 .msg(format!("expected {}", kind.to_string())));
         };
@@ -93,19 +100,19 @@ impl<'a> Parser<'a> {
         Ok(token)
     }
 
-    fn expect_multiple(&self, kinds: Vec<Tokens>) -> Result<Token, SyntaxError> {
+    fn expect_multiple(&mut self, kinds: Vec<TokenKind>) -> Result<Token, SyntaxError> {
         let token = self.current();
         if kinds.contains(&token.kind) {
             return Ok(token);
         }
 
-        let str_kinds: Vec<String> = kinds.iter().map(|kind: &Tokens| kind.to_string()).collect();
+        let str_kinds: Vec<String> = kinds.iter().map(|kind| kind.to_string()).collect();
         Err(SyntaxError::default()
-            .ctx(ErrorContext::span(
-                SourcePoint::new(token.span.start.ln, token.span.start.col),
-                SourcePoint::new(token.span.start.ln, token.span.end.col),
-                self.src.clone(),
-            ))
+            .ctx(
+                ErrorContextBuilder::span(self.current().loc.start_col, self.current().loc.end_col)
+                    .from_src_and_ln(&self.src, self.current().loc.ln)
+                    .build(),
+            )
             .kind(SyntaxErrorKind::Expected(SyntaxErrorSource::Token))
             .msg(format!("expected {}", str_kinds.join(" or "))))
     }
@@ -119,7 +126,7 @@ impl<'a> Default for Parser<'a> {
             tokens: &DEFAULT_TOKENS,
             errors: Vec::new(),
             project: ProjectNode::default(),
-            src: SourceFile::default(),
+            src: ScriptSource::default(),
             cursor: 0,
         }
     }

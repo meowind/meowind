@@ -1,16 +1,23 @@
-use crate::utils::colors::*;
-use std::fmt;
+use crate::{
+    frontend::{lexing::Token, Loc},
+    structs::ScriptSource,
+    utils::colors::*,
+};
+use std::{fmt, path::PathBuf};
 
-use super::{context::ErrorContext, MeowindError};
+use super::{
+    context::{ErrorContext, ErrorContextKind},
+    MeowindError,
+};
 
 #[derive(Clone)]
-pub struct SyntaxError<'a> {
+pub struct SyntaxError {
     kind: Option<SyntaxErrorKind>,
     msg: Option<String>,
-    ctx: Option<ErrorContext<'a>>,
+    ctx: Option<ErrorContext>,
 }
 
-impl Default for SyntaxError<'_> {
+impl Default for SyntaxError {
     fn default() -> Self {
         Self {
             kind: None,
@@ -20,30 +27,30 @@ impl Default for SyntaxError<'_> {
     }
 }
 
-impl<'a> SyntaxError<'a> {
-    pub fn kind(&self, kind: SyntaxErrorKind) -> Self {
-        Self {
+impl SyntaxError {
+    pub fn kind(&self, kind: SyntaxErrorKind) -> SyntaxError {
+        SyntaxError {
             kind: Some(kind),
             ..self.clone()
         }
     }
 
-    pub fn msg<T: ToString>(&self, msg: T) -> Self {
-        Self {
+    pub fn msg<T: ToString>(&self, msg: T) -> SyntaxError {
+        SyntaxError {
             msg: Some(msg.to_string()),
             ..self.clone()
         }
     }
 
-    pub fn ctx(&self, ctx: ErrorContext<'a>) -> Self {
-        Self {
+    pub fn ctx(&self, ctx: ErrorContext) -> SyntaxError {
+        SyntaxError {
             ctx: Some(ctx),
             ..self.clone()
         }
     }
 }
 
-impl MeowindError for SyntaxError<'_> {
+impl MeowindError for SyntaxError {
     fn to_string(&self) -> String {
         let mut error_body = format!("{RED}{BOLD}syntax error{RESET}");
 
@@ -86,13 +93,13 @@ impl ToString for SyntaxErrorSource {
 impl fmt::Display for SyntaxErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let text = match self {
-            Self::Expected(source) => {
+            SyntaxErrorKind::Expected(source) => {
                 format!("expected {}", source.to_string().to_lowercase())
             }
-            Self::Unexpected(source) => {
+            SyntaxErrorKind::Unexpected(source) => {
                 format!("unexpected {}", source.to_string().to_lowercase())
             }
-            Self::Invalid(source) => {
+            SyntaxErrorKind::Invalid(source) => {
                 format!("invalid {}", source.to_string().to_lowercase())
             }
         };
